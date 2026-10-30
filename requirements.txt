@@ -1,0 +1,7 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.14.1+cpu
+pvlib==0.16.1
+
+-e ./opf_teacher[highs,gurobi,plot]
+-e ./opendss_environment

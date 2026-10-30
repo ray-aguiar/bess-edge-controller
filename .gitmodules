@@ -1,0 +1,6 @@
+[submodule "opf_teacher"]
+	path = opf_teacher
+	url = https://github.com/TeradaZenichi/opf-teacher.git
+[submodule "opendss_environment"]
+	path = opendss_environment
+	url = https://github.com/TeradaZenichi/powerflow-opendss-environment.git

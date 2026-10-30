@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "formulation": "single_phase_socp",
+  "timestamp_convention": "UTC interval start, copied verbatim from demand.csv",
+  "local_timezone": "Europe/Zurich",
+  "rows": 70176,
+  "dt_h": 0.25,
+  "start_utc": "2022-12-31T23:00:00+00:00",
+  "end_exclusive_utc": "2024-12-31T23:00:00+00:00",
+  "site_assumption": {
+    "name": "Zurich, representative site; demand location not specified",
+    "latitude": 47.3769,
+    "longitude": 8.5417,
+    "altitude": 408.0
+  },
+  "pv_model": {
+    "library": "pvlib",
+    "version": "0.16.1",
+    "dc_capacity_kwp": 260.0,
+    "ac_limit_kw": 260.0,
+    "tilt_degrees": 35.0,
+    "azimuth_degrees": 180.0,
+    "gamma_pdc_per_celsius": -0.004,
+    "system_loss_fraction": 0.14,
+    "inverter_nominal_efficiency": 0.96,
+    "temperature": "Faiman u0=25, u1=6.84; 10m wind used as proxy for module wind",
+    "transposition": "Hay-Davies, albedo=0.2",
+    "temporal_model": "hourly beam/diffuse disaggregated with Ineichen clear-sky weights; 5min midpoint samples averaged to 15min",
+    "output": "available AC kW before dispatch curtailment; modeled, not measured"
+  },
+  "weather": {
+    "provider": "Open-Meteo",
+    "model": "ECMWF ERA5",
+    "request": {
+      "url": "https://archive-api.open-meteo.com/v1/archive?latitude=47.3769&longitude=8.5417&elevation=408.0&start_date=2022-12-30&end_date=2025-01-01&hourly=temperature_2m%2Cwind_speed_10m%2Cshortwave_radiation%2Cdirect_radiation%2Cdiffuse_radiation&models=era5&timezone=UTC&wind_speed_unit=ms",
+      "params": {
+        "latitude": 47.3769,
+        "longitude": 8.5417,
+        "elevation": 408.0,
+        "start_date": "2022-12-30",
+        "end_date": "2025-01-01",
+        "hourly": "temperature_2m,wind_speed_10m,shortwave_radiation,direct_radiation,diffuse_radiation",
+        "models": "era5",
+        "timezone": "UTC",
+        "wind_speed_unit": "ms"
+      },
+      "retrieved_at_utc": "2026-10-30T15:46:26.714026+00:00"
+    },
+    "returned_latitude": 47.5,
+    "returned_longitude": 8.5,
+    "returned_elevation": 408.0,
+    "diagnostics": {
+      "discarded_night_beam_wh_per_m2": 0.0,
+      "discarded_night_diffuse_wh_per_m2": 0.0,
+      "maximum_dni_w_per_m2": 928.6408637101787
+    }
+  },
+  "tariff": {
+    "source": "ElCom 2024 announcement, 2023 comparison updated to 27.20 ct/kWh",
+    "consumer_category": "H4, household 4500 kWh/year, national median benchmark",
+    "currency": "CHF",
+    "vat_included": false,
+    "intraday_variation": false,
+    "export_price": "not calibrated; config.json still uses feed_in_tariff_ratio=1.0"
+  },
+  "yearly": {
+    "2023": {
+      "rows": 35040,
+      "price_chf_per_kwh_excluding_vat": 0.272,
+      "pv_energy_kwh": 316134.037019613,
+      "pv_yield_kwh_per_kwp": 1215.900142383127,
+      "pv_peak_kw": 227.8647774339891
+    },
+    "2024": {
+      "rows": 35136,
+      "price_chf_per_kwh_excluding_vat": 0.3214,
+      "pv_energy_kwh": 302883.96327967895,
+      "pv_yield_kwh_per_kwp": 1164.9383203064574,
+      "pv_peak_kw": 214.13435305919052
+    }
+  },
+  "versions": {
+    "python": "3.14.4",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0"
+  },
+  "sha256": {
+    "demand.csv": "c6e6a9285bbeb411a9739980ebee821c43846eed578f4bb6d47a7905591f5a84",
+    "price.csv": "4843a4858b5d54b889051234682d59260c7ac7af8964dfce8e8e3185e19da615",
+    "pv.csv": "f5bbb4e4fe64f84731d91ac2a089b37e95c70edfd1dfdef9dffd4c924b24710d",
+    "generate_profiles.py": "ba8c0af3ebfc50d03e1ae18790063206578c126709de92a151130c461395a7cb",
+    "sources/open_meteo_era5.json": "78749593a45202cf9de1b144c1c1b00f8eb15a60dd1e75ebeb2ea6dbff6c86b5"
+  }
+}

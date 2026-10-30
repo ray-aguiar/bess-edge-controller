@@ -1,0 +1,15 @@
+{
+  "url": "https://archive-api.open-meteo.com/v1/archive?latitude=47.3769&longitude=8.5417&elevation=408.0&start_date=2022-12-30&end_date=2025-01-01&hourly=temperature_2m%2Cwind_speed_10m%2Cshortwave_radiation%2Cdirect_radiation%2Cdiffuse_radiation&models=era5&timezone=UTC&wind_speed_unit=ms",
+  "params": {
+    "latitude": 47.3769,
+    "longitude": 8.5417,
+    "elevation": 408.0,
+    "start_date": "2022-12-30",
+    "end_date": "2025-01-01",
+    "hourly": "temperature_2m,wind_speed_10m,shortwave_radiation,direct_radiation,diffuse_radiation",
+    "models": "era5",
+    "timezone": "UTC",
+    "wind_speed_unit": "ms"
+  },
+  "retrieved_at_utc": "2026-10-30T15:46:26.714026+00:00"
+}
