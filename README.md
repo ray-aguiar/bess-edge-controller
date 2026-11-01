@@ -13,7 +13,8 @@ The project includes two editable Git submodules:
 
 ## Installation
 
-Requires Python 3.11+, Git LFS, and a valid Gurobi license for the SOCP teacher.
+Requires Python 3.11+ and Git LFS. Continuous SOCP cases use Clarabel on CPU;
+cases with SOS controls require a valid Gurobi license.
 
 ```powershell
 git clone --recurse-submodules https://github.com/ray-aguiar/bess-edge-controller.git
@@ -37,8 +38,37 @@ remaining SOCP horizon and executes the full teacher action in OpenDSS.
 Set `DEVICE_ID` to select the BESS and `WINDOW` to set the number of observed
 states in each X. With `WINDOW = 3`, X contains `[state(t-2), state(t-1), state(t)]`
 and Y contains only the selected device's action at `t`. The first two steps
-fill the history; 96 steps produce 94 pairs. Each call starts a new history.
+fill the history; 96 valid steps produce 94 pairs. Labels must pass the teacher's
+physical-consistency and SOCP checks. Each call starts a new history.
+Training consumes the shared `mpc.rollout()` one interval at a time, using the
+remaining episode as its forecast horizon. `mpc.py` uses a fixed rolling horizon.
 Use a shorter `HORIZON` for a quick check; each interval requires a new SOCP solve.
+
+## Run MPC
+
+```powershell
+.\.venv\Scripts\python.exe mpc.py
+```
+
+`mpc.py` starts with 96 simulation steps (one day) and an eight-interval SOCP forecast
+horizon (two hours). Each step updates the teacher with the current OpenDSS
+observation, solves the next `HORIZON` intervals, and applies only the first
+action for all devices. The horizon then advances by one interval. Set `STEPS`
+and `HORIZON` at the top of the script. `main()` returns the states, requested
+and executed actions, predicted battery SoC, costs, voltages, solver summaries,
+and next observations for inspection. The objective covers the entire forecast
+horizon; compare its first-interval cost with the environment cost and reward.
+
+Compare a complete day with an idle-battery baseline:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.evaluate_mpc --steps 96 --horizon 8 --label fixed
+.\.venv\Scripts\python.exe -m scripts.evaluate_mpc --steps 96 --horizon 24 --label fixed
+```
+
+The evaluation saves per-step comparisons, raw records, and summaries under
+`results/`, which is ignored by Git. Both horizons completed 96 optimal steps
+with valid labels on the original 1,000-kVA base.
 
 ## Working on the submodules
 
