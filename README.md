@@ -11,6 +11,12 @@ The project includes two editable Git submodules:
 - [opf_teacher](https://github.com/TeradaZenichi/opf-teacher): reference actions from optimal power flow.
 - [opendss_environment](https://github.com/TeradaZenichi/powerflow-opendss-environment): electrical simulation through a Gymnasium environment.
 
+Research scope, formulation and experiment records are in [docs/](docs/README.md).
+The root Python entry points are `train.py` and `test.py`. Essential helpers
+live in `tools/`; standalone verification and profile-generation scripts live
+in `tools/scripts/`. Network architectures live in `learning/networks/` and
+learning algorithms in `learning/algorithms/`; these are currently empty scaffolds.
+
 ## Installation
 
 Requires Python 3.11+ and Git LFS. Continuous SOCP cases use Clarabel on CPU;
@@ -26,49 +32,112 @@ python -m venv .venv
 For an existing checkout, run `git submodule update --init --recursive` first.
 Dependencies include PyTorch for CPU; both submodules are installed in editable mode.
 
-## Run the example
+## Select dataset dates
+
+Both scripts accept `start_date` (inclusive) and `end_date` (exclusive) in the
+configuration dictionary. Dates without an offset use `Europe/Zurich` when the
+dataset has timezone-aware timestamps; explicit UTC/offset dates also work.
+For example, `2023-01-01` to `2023-01-02` selects one Swiss calendar day.
+Boundaries must match dataset intervals and remain within the available data.
+The selected range determines the number of steps, overriding `steps` when an
+end date is supplied. Daylight-saving days may contain 92 or 100 intervals.
+
+Without dates, collection defaults to one horizon of data and comparison to
+`steps` intervals. Each selected range starts a fresh SoC/history episode.
+The saved configuration includes resolved dates, row offset and step count.
+
+## Collect teacher data
 
 ```powershell
 .\.venv\Scripts\python.exe train.py
 ```
 
-The example collects local observation/action pairs in pu for BESS `b1` at
-`bus_004` over one day of the Swiss five-bus scenario. Each step solves the
-remaining SOCP horizon and executes the full teacher action in OpenDSS.
-Set `DEVICE_ID` to select the BESS and `WINDOW` to set the number of observed
-states in each X. With `WINDOW = 3`, X contains `[state(t-2), state(t-1), state(t)]`
-and Y contains only the selected device's action at `t`. The first two steps
-fill the history; 96 valid steps produce 94 pairs. Labels must pass the teacher's
-physical-consistency and SOCP checks. Each call starts a new history.
-Training consumes the shared `mpc.rollout()` one interval at a time, using the
-remaining episode as its forecast horizon. `mpc.py` uses a fixed rolling horizon.
-Use a shorter `HORIZON` for a quick check; each interval requires a new SOCP solve.
+Edit `config`, `output` and `seed` in the `if __name__ == "__main__"` block,
+or call the collector directly:
 
-## Run MPC
+```python
+from train import main
 
-```powershell
-.\.venv\Scripts\python.exe mpc.py
+config = {"window": 3, "device": "b1", "horizon": 96, "case": "data/5bus-switzerland",
+          "start_date": "2023-01-01", "end_date": "2023-01-02"}
+x, y = main(config, output="results/train", seed=42)
 ```
 
-`mpc.py` starts with 96 simulation steps (one day) and an eight-interval SOCP forecast
-horizon (two hours). Each step updates the teacher with the current OpenDSS
-observation, solves the next `HORIZON` intervals, and applies only the first
-action for all devices. The horizon then advances by one interval. Set `STEPS`
-and `HORIZON` at the top of the script. `main()` returns the states, requested
-and executed actions, predicted battery SoC, costs, voltages, solver summaries,
-and next observations for inspection. The objective covers the entire forecast
-horizon; compare its first-interval cost with the environment cost and reward.
+The teacher advances its own predicted SoC, actions and voltage; no environment
+is stepped during collection. The dates select the episode; `horizon` is the
+maximum optimization lookahead in intervals. It shrinks near the selected end,
+so forecasts never enter the next dataset partition. X contains only the selected bus and battery signals;
+Y is that battery's current P/Q action in pu. With window 3, 96 valid steps
+produce 94 pairs. Voltage is from the preceding solved interval, initialized
+at 1 pu; it never uses the current action's resulting voltage.
 
-Compare a complete day with an idle-battery baseline:
+The function returns CPU float32 PyTorch tensors: X has shape
+`[samples, window, 6]` and Y has shape `[samples, 2]`. The feature order is shared
+with `test.py`. For 96 valid intervals and window 3, their shapes are
+`[94, 3, 6]` and `[94, 2]`. The tensors are saved as `x.pt` and `y.pt`:
 
-```powershell
-.\.venv\Scripts\python.exe -m scripts.evaluate_mpc --steps 96 --horizon 8 --label fixed
-.\.venv\Scripts\python.exe -m scripts.evaluate_mpc --steps 96 --horizon 24 --label fixed
+```python
+import torch
+
+x = torch.load("results/train/x.pt")
+y = torch.load("results/train/y.pt")
 ```
 
-The evaluation saves per-step comparisons, raw records, and summaries under
-`results/`, which is ignored by Git. Both horizons completed 96 optimal steps
-with valid labels on the original 1,000-kVA base.
+The original pairs remain in `x.json` and `y.json` for inspection, including
+observation timestamps. `config.json` records the seed, settings and
+feature/target order. PyTorch is seeded; profiles stay
+chronological. Neural-network weight training is not implemented yet.
+
+Supervised algorithm modules can expose `train(x, y, config, output, seed)`, returning
+the trained PyTorch module and saving its weights/metrics to `output`.
+Once implemented, pass the function directly, for example
+`trained_model = main(config, output="results/runs/bc_mlp_w3_seed42_001", seed=42, trainer=behavior_cloning.train)`
+after `from learning.algorithms import behavior_cloning`. Without a trainer, `main()` returns X/Y as above.
+The algorithm modules are currently empty placeholders; `behavior_cloning.train` is a
+proposed entry point, not an implemented function. `torch.nn.Module.train()`
+separately switches a network to training mode; the module-level function owns
+the optimization loop.
+
+## Compare MPC and a trained NN
+
+`test.py` is the English name of the comparison script. It runs each controller in a separate OpenDSS
+context, from the same initial state and exogenous profiles. Both trajectories
+use their own executed-state feedback. Set the configuration and trained model
+in its main block, or call:
+
+```python
+from test import main
+
+records, summary = main(model=trained_model,
+                        config={"horizon": 8, "window": 3, "device": "b1",
+                                "start_date": "2024-02-29", "end_date": "2024-03-01"},
+                        output="results/comparison", seed=42)
+```
+
+The CPU `torch.nn.Module` receives float32 input `[batch, window, 6]` and
+returns `[batch, 2]` in pu. Input features, in order, are voltage from the
+previous interval, current local P/Q demand, current SoC, and previous executed
+BESS P/Q. Outputs are charging-positive active power and injection-positive
+reactive power. Include any learned preprocessing inside the supplied model.
+The first observation is repeated to fill the NN window at episode startup.
+This first comparison supports one BESS. Instantiate the trained architecture,
+load its weights, and pass the resulting module. With `model=None`, only the
+MPC baseline runs.
+
+Collection and comparison both use available PV generation with Q=0; the
+teacher optimizes only the BESS. This fixed policy is recorded in the metadata.
+Original scenario files are unchanged.
+
+Results include separate `mpc.json` and `nn.json` trajectories and `summary.json`
+with executed cost/reward, initial/final SoC, voltage extrema and decision time.
+There is no terminal-energy cost adjustment. Generated artifacts stay in the
+Git-ignored `results/` folder. No trained-policy performance is claimed yet.
+
+The original detailed teacher/environment check remains available:
+
+```powershell
+.\.venv\Scripts\python.exe -m tools.scripts.evaluate_mpc --steps 96 --horizon 8 --label contract
+```
 
 ## Working on the submodules
 

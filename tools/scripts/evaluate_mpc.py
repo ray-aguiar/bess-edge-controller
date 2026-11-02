@@ -5,14 +5,14 @@ from pathlib import Path
 
 import pandas as pd
 
-import mpc
+import test
 from opendss_environment import EnvironmentConfig, MicrogridEnv
 
 
-def main(steps=mpc.STEPS, horizon=mpc.HORIZON, label=None):
-    records = mpc.main(steps=steps, horizon=horizon)
+def main(steps=test.STEPS, horizon=test.HORIZON, label=None):
+    records = list(test.rollout(steps=steps, horizon=horizon))
     name = f"mpc-{steps}-h{horizon}" + (f"-{label}" if label else "")
-    output = Path(__file__).resolve().parents[1] / "results" / name
+    output = Path(__file__).resolve().parents[2] / "results" / name
     output.mkdir(parents=True, exist_ok=True)
     (output / "records.json").write_text(json.dumps(records, default=str, indent=2), encoding="utf-8")
     rows = []
@@ -79,7 +79,7 @@ def main(steps=mpc.STEPS, horizon=mpc.HORIZON, label=None):
 
     table = pd.DataFrame(rows)
     table.to_csv(output / "steps.csv", index=False)
-    baseline = MicrogridEnv(EnvironmentConfig(mpc.CASE_PATH, episode_steps=steps))
+    baseline = MicrogridEnv(EnvironmentConfig(test.CASE_PATH, episode_steps=steps))
     observation, _ = baseline.reset()
     baseline_reward = 0.0
     for step in range(steps):
@@ -129,7 +129,7 @@ def main(steps=mpc.STEPS, horizon=mpc.HORIZON, label=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compare teacher predictions with OpenDSS execution.")
-    parser.add_argument("--steps", type=int, default=mpc.STEPS)
-    parser.add_argument("--horizon", type=int, default=mpc.HORIZON)
+    parser.add_argument("--steps", type=int, default=test.STEPS)
+    parser.add_argument("--horizon", type=int, default=test.HORIZON)
     parser.add_argument("--label", help="Optional label to keep experiment outputs separate.")
     main(**vars(parser.parse_args()))

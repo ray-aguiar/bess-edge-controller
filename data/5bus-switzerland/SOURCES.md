@@ -95,7 +95,7 @@ sob responsabilidade dos modelos dos dispositivos.
 Na raiz do repositório, com as dependências de `requirements.txt` instaladas:
 
 ```powershell
-.\.venv\Scripts\python.exe data\5bus-switzerland\generate_profiles.py
+.\.venv\Scripts\python.exe -m tools.scripts.generate_profiles
 ```
 
 O gerador reutiliza a resposta meteorológica salva e dispensa rede nas próximas

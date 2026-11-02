@@ -4,7 +4,7 @@ from pathlib import Path
 import pyomo.environ as pyo
 
 from opf_teacher.teacher import Teacher
-from scripts.investigate_mpc import cases
+from tools.scripts.investigate_mpc import cases
 
 
 def check_case(case):
@@ -100,6 +100,6 @@ def check_case(case):
 
 if __name__ == "__main__":
     reports = {name: check_case(case) for name, case in cases().items()}
-    output = Path(__file__).resolve().parents[1] / "results/mpc-investigation/feasible-candidates.json"
+    output = Path(__file__).resolve().parents[2] / "results/mpc-investigation/feasible-candidates.json"
     output.write_text(json.dumps(reports, indent=2), encoding="utf-8")
     print(json.dumps(reports, indent=2))

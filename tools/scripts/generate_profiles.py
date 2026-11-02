@@ -11,7 +11,7 @@ import pvlib
 import requests
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2] / "data" / "5bus-switzerland"
 SITE = {"latitude": 47.3769, "longitude": 8.5417, "altitude": 408.0}
 TIMEZONE = "Europe/Zurich"
 TARIFFS = {2023: 0.272, 2024: 0.3214}  # CHF/kWh, ElCom H4 median, excluding VAT.
@@ -192,7 +192,7 @@ def main():
         "yearly": yearly,
         "versions": {"python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__},
         "sha256": {name: file_hash(ROOT / name) for name in (
-            "demand.csv", "price.csv", "pv.csv", "generate_profiles.py", "sources/open_meteo_era5.json",
+            "demand.csv", "price.csv", "pv.csv", "../../tools/scripts/generate_profiles.py", "sources/open_meteo_era5.json",
         )},
     }
     if file_hash(demand_path) != demand_hash:

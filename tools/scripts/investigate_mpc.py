@@ -10,7 +10,7 @@ from opf_teacher.opf.single_phase.results import attach_results
 from opf_teacher.teacher import Teacher
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "results" / "mpc-investigation"
 
 
