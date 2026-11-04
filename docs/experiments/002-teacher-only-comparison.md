@@ -1,5 +1,9 @@
 # Experiment 002: teacher-only collection and comparison pipeline
 
+Timing note (2026-11-04): the pilot below used previous-interval voltage.
+The current pipeline uses current pre-action voltage; regenerate datasets and
+retrain checkpoints before comparing results across these input contracts.
+
 Date: 2026-11-01. This is a pipeline validation on the working tree following
 commit 949ed67, not a trained-policy performance experiment. The teacher and
 environment submodule commits remain those recorded in experiment 001.
@@ -48,7 +52,8 @@ The next study must train a policy and evaluate unseen periods.
 
 ## Date-range selection checks
 
-The comparison script is now named test.py. A later check selected
+The comparison runner is now in `tools/scripts/compare_controllers.py`;
+`test.py` loads a trained MLP for policy-only evaluation. A later check selected
 2024-02-29 12:00 to 13:00 in Europe/Zurich: four intervals, two local pairs
 with window 3, and maximum optimization horizon 2. Both controller environments
 matched the selected timestamps, demand P/Q, PV availability and 2024 tariff.

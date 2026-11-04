@@ -1,7 +1,10 @@
 # Local imitation-control formulation
 
-This describes the implemented single-phase case and the planned student.
-Source: [comparison](../test.py), [pair collection](../train.py) and the
+This describes the implemented single-phase case and local student.
+The [journal research direction](journal-research.md) defines the proposed
+trustworthiness study and its evidence requirements.
+Source: [policy evaluation](../test.py),
+[comparison](../tools/scripts/compare_controllers.py), [pair collection](../train.py) and the
 [teacher model](../opf_teacher/opf_teacher/opf/single_phase/distflow_socp.py).
 
 ## Timing, units and signs
@@ -68,10 +71,11 @@ $$
 Charge/discharge powers and stored energy have configured bounds. Battery
 inverter loss is debited from stored energy. The model allows nonnegative
 charge and discharge variables simultaneously; diagnostics check their physical
-consequences. The current cyclic terminal target is 50% SoC at each horizon end,
-while the initial SoC is updated from the environment.
+consequences. The current cyclic terminal target is 50% SoC at each horizon end.
+Initial SoC follows the teacher's predicted state during offline collection
+and the environment's executed state during MPC evaluation.
 
-For the current curtailable PV, daytime constraints include
+The teacher also supports curtailable PV, with daytime constraints including
 $0\leq P^{PV}$, $P^{PV}+L^{PV}\leq P^{available}$,
 $(P^{PV})^2+(Q^{PV})^2\leq S_{PV}^2$ and
 $L^{PV}\geq L_{rated}^{PV}(Q^{PV}/S_{PV})^2$.
@@ -92,11 +96,15 @@ For BESS $d$, the current selector retains these pre-action signals:
 | Metadata | timestamp, dt_h |
 
 Other buses, grid prices, forecasts and remote PV measurements are excluded.
-The voltage field is the preceding interval's completed voltage, initialized
-at 1 pu: predicted by the teacher in collection and measured in NN evaluation.
-This keeps it independent of the current target action. The shared feature
+The voltage field is measured before the new action, with current loads and
+previous device powers held; PV is capped by current availability. Collection
+uses a radial fixed-power snapshot without advancing energy; evaluation uses
+the environment's pre-action observation. The initial snapshot uses zero
+previous device powers. This keeps it independent of the current target action. The shared feature
 order is voltage, local P demand, local Q demand, SoC, previous BESS P and Q.
 Timestamp and interval duration remain metadata, not numeric NN features.
+Data and model configurations record `voltage_source="pre_action"`; models
+trained with previous-interval voltage must be retrained before evaluation.
 
 $$
 X_t^d=[o_{t-W+1}^d,\ldots,o_t^d],\qquad
@@ -104,17 +112,18 @@ Y_t^d=[P_t^{B,*},Q_t^{B,*}],\qquad
 \widehat{Y}_t^d=\pi_\theta(X_t^d).
 $$
 
-$Y_t^d$ selects the device's first action from the global optimum. It is a
+$Y_t^d$ selects the device's first action from the global OPF reference. It is a
 requested action; executed actions and their adjustments are logged separately.
 Both target powers are in pu in the pair contract; multiply by the network
 power base to report kW and kvar.
 With $W=3$, the first two steps fill the history and 96 valid steps yield 94 pairs.
 History resets between episodes. Labels require quality["valid_for_imitation"].
 
-The proposed first training objective is mean squared error between predicted
-and teacher actions, with preprocessing fitted on the training partition only.
-This loss and the neural network are not implemented yet. Since local inputs
-omit information used by the teacher, exact imitation is not guaranteed.
+BehaviorCloning uses mean squared error between predicted and teacher actions
+and trains the MLP with Adam. Hyperparameters are supplied manually; validation
+uses separately prepared date ranges. Any future learned preprocessing must
+be fitted on the training partition only. Since local inputs omit information
+used by the teacher, exact imitation is not guaranteed.
 
 ## Closed-loop evaluation
 
@@ -123,8 +132,9 @@ for the next input. Compare executed interval cost with the teacher's
 first-interval predicted cost, and use $reward_t=-cost_t^{executed}$.
 The horizon objective $J_t$ covers several intervals.
 
-test.py defaults to $K=8$ and train.py to $K=96$. In both scripts, dates
-select a half-open dataset range and K is the maximum forecast lookahead.
+The MPC comparison helper defaults to $K=8$ and train.py to $K=96$.
+test.py loads a trained policy and does not solve an MPC. Dates select a
+half-open dataset range; K is the maximum teacher/MPC forecast lookahead.
 The final horizons shrink to stay inside the selected range, avoiding forecast
 leakage across partitions. Choose a consistent K before a learning study. Both use fixed, uncurtailed PV with Q=0, so the two
 controllers have the same control authority over the BESS.

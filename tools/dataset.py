@@ -2,6 +2,15 @@
 import pandas as pd
 
 
+def configure_pv(case, policy):
+    if policy not in {"fixed", "teacher"}:
+        raise ValueError("pv_policy must be 'fixed' or 'teacher'")
+    if policy == "fixed":
+        for device in case.pv:
+            device.control, device.power_factor, device.curtailable = "fixed_pf", 1.0, False
+    return case
+
+
 def select_period(case, config, default_steps=96):
     index = case.index
     data_end = index[-1] + pd.Timedelta(hours=case.dt_h)

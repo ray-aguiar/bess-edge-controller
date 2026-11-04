@@ -15,12 +15,12 @@ def encode(history):
                         dtype=torch.float32)
 
 
-def local_observation(observation, bus, device, voltage):
+def local_observation(observation, bus, device):
     measured_bus = observation["buses"][bus]
     measured_device = observation["bess"][device]
     return {
         "timestamp": observation["timestamp"], "dt_h": observation["dt_h"],
-        "bus": {"v_before_pu": voltage, "p_load_pu": measured_bus["p_load_pu"]["a"],
+        "bus": {"v_before_pu": measured_bus["v_before_pu"]["a"], "p_load_pu": measured_bus["p_load_pu"]["a"],
                 "q_load_pu": measured_bus["q_load_pu"]["a"]},
         "device": {"soc_before_frac": measured_device["soc_before_frac"],
                    "previous_p_pu": measured_device["previous_p_pu"]["a"],

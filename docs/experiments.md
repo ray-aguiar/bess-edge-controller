@@ -3,6 +3,10 @@
 The main question is how closely a battery controller with local measurements
 can reproduce the decisions and closed-loop performance of a global teacher.
 
+The [journal research direction](journal-research.md) extends this question
+to reliability, local information limits, constraint handling and robustness.
+It distinguishes implemented diagnostics from proposed methods and evidence.
+
 ## Sequence
 
 | ID | Question | Status |
