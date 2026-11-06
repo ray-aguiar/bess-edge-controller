@@ -25,14 +25,14 @@ for validation of this research question.
 
 | Component | Available information and responsibility |
 | --- | --- |
-| Teacher | Full network and forecast profiles; generate reference BESS actions |
+| Teacher | Full network and profiles; optimize once per selected period or optional weekly block to generate reference BESS actions |
 | NN | Its bus measurements, its battery state and their local history |
 | Local protection, if developed | Local measurements and known device limits |
 | Evaluation | Full simulated network; assess impacts without feeding remote measurements to the NN |
 
 The current numerical input is voltage measured before the new action,
 current local P/Q demand, pre-action SoC and previous BESS P/Q. A chronological
-window forms X; the current first optimized P/Q action forms Y. Timestamp and
+window forms X; the optimized P/Q action at its last timestamp forms Y. Timestamp and
 interval duration are metadata. Prices, forecasts, remote PV and other buses'
 measurements are excluded from NN inputs.
 
@@ -107,13 +107,16 @@ uncertainty methods still need selection and implementation. The initial
 five-bus system is an integration and pilot case; broader claims require
 evidence beyond it.
 
-Use chronological training/validation/test partitions before constructing
-windows and teacher horizons. Keep forecasts within their partition, reset
+Reserve 2024 for final testing before constructing windows and teacher horizons.
+Split the 2023 pairs randomly into 80% training and 20% internal evaluation;
+their windows may share observations, so internal MSE is not an independent-period
+generalization estimate. Keep teacher forecasts within the first year, reset
 histories at episode boundaries and fit preprocessing on training data only.
-Select model settings on validation data and reserve the final test periods.
+Select model settings on internal evaluation data and reserve the final test year.
 
-Start with training seeds `[42, 43, 44, 45, 46]`, identical partitions and the
-same model-selection protocol. Separate variation across training seeds from
+Start with seeds `[42, 43, 44, 45, 46]`, identical year boundaries and the
+same model-selection protocol. Each seed controls the split and training randomness.
+Separate variation across these repetitions from
 variation across test episodes. Consecutive 15-minute rows are not independent
 experimental repetitions; state the aggregation and uncertainty-estimation
 procedure used for reported results.

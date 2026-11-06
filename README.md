@@ -43,8 +43,8 @@ Boundaries must match dataset intervals and remain within the available data.
 The selected range determines the number of steps.
 Daylight-saving days may contain 92 or 100 intervals.
 
-Without dates, collection defaults to one horizon of data and policy testing
-to the complete dataset. Each selected range starts a fresh SoC/history episode.
+Without dates, collection and policy testing use the complete dataset.
+Each selected range starts a fresh SoC/history episode.
 The saved configuration includes resolved dates, row offset and step count.
 
 ## Collect teacher data
@@ -54,35 +54,50 @@ The saved configuration includes resolved dates, row offset and step count.
 ```
 
 The main block collects tensors once and trains BehaviorCloning in a loop with
-`max_iterations = 1`, saving weights/history under `results/train/seed_42/trial_0/`.
+`max_iterations = 1`, saving the current comparison under `results/reward_selection/seed_43/trial_0/`.
+It uses 2023 for an 80/20 random train/evaluation split (`eval_fraction=0.2`),
+with the supplied seed. `x_train`/`y_train` feed training; `x_eval`/`y_eval`
+are evaluated after every epoch. `test.py` reserves all of 2024.
 Edit `config`, `hyperparameters`, `output` and `seed` in that block,
 or call the collector directly:
 
 ```python
 from train import main
 
-config = {"window": 3, "device": "b1", "horizon": 96, "case": "data/5bus-switzerland",
+config = {"window": 3, "device": "b1", "case": "data/5bus-switzerland",
+          "block_weeks": None,
           "start_date": "2023-01-01", "end_date": "2023-01-02"}
 x, y = main(config, output="results/train/seed_42", seed=42)
 ```
 
 Collection uses `opf_teacher.collect_pairs(case, PairConfig(...))`; the teacher
-owns the temporal rollout, local selection and history assembly. This repository
+solves the selected period once and owns local selection and history assembly. This repository
 selects the dates, fixes PV operation and converts the returned pairs to tensors.
-The teacher advances its own predicted SoC, actions and voltage; no environment
-is stepped during collection. The dates select the episode; `horizon` is the
-maximum optimization lookahead in intervals. It shrinks near the selected end,
-so forecasts never enter the next dataset partition. X contains only the selected bus and battery signals;
-Y is that battery's current P/Q action in pu. With window 3, 96 valid steps
-produce 94 pairs. Voltage is calculated before the new action, using current
+The teacher reconstructs observations using the optimized SoC and previous actions;
+no environment is stepped during collection. Dates define the complete optimization
+period, so profiles never enter the next dataset partition. The saved configuration
+records `teacher_mode="single_optimization"` by default. X contains only the selected bus and battery signals;
+Y is that battery's current P/Q action in pu. Training sets `pad_initial=True`:
+missing past observations repeat the first state, matching policy evaluation.
+With window 3, the first windows are `[x0, x0, x0]`, `[x0, x0, x1]`, then
+`[x0, x1, x2]`; 96 valid steps produce 96 pairs. This initialization occurs only
+at episode start, not at weekly block boundaries. Voltage is calculated before the new action, using current
 loads and held previous device powers (PV is capped by current availability).
 A radial power-flow snapshot supplies it without stepping the environment or
 integrating battery energy. It never uses the new action's resulting voltage.
 
+Set `block_weeks=1` to optimize consecutive one-week blocks, or another positive
+integer for longer blocks. `None` keeps one optimization over the entire selected
+period. A week means 168 elapsed hours (672 intervals at 15 minutes); the last
+block may be shorter. SoC, previous BESS/PV commands and observation history carry
+across blocks. The original terminal SoC target applies only to the last block.
+The saved mode becomes `teacher_mode="weekly_blocks"`. This reduces optimization
+memory, but does not guarantee the optimum of a single full-period problem.
+
 The function returns CPU float32 PyTorch tensors: X has shape
 `[samples, window, 6]` and Y has shape `[samples, 2]`. The feature order is shared
 with `test.py`. For 96 valid intervals and window 3, their shapes are
-`[94, 3, 6]` and `[94, 2]`. The tensors are saved as `x.pt` and `y.pt`:
+`[96, 3, 6]` and `[96, 2]`. The tensors are saved as `x.pt` and `y.pt`:
 
 ```python
 import torch
@@ -99,32 +114,54 @@ PyTorch deterministic algorithms are enabled, and profiles stay chronological.
 
 ## Train a behavior-cloning policy
 
-Using the dataset and tensors above, create the trainer and run the loop:
+Using the training tensors prepared by the main block, create the trainer and run the loop:
 
 ```python
 from pathlib import Path
 from learning.algorithms.behavior_cloning import BehaviorCloning, Hyperparameter
 
+from tools.evaluation import PolicyEvaluator
+
 hyperparameters = Hyperparameter(hidden_size=64, learning_rate=1e-3,
                                 batch_size=64, epochs=100)
-trainer = BehaviorCloning(hyperparameters)
 seed = 42
+reward_config = config | {"start_date": "2023-03-01", "end_date": "2023-03-10"}
+evaluator = PolicyEvaluator(reward_config, seed=seed)
+trainer = BehaviorCloning(hyperparameters, reward_evaluator=lambda model: evaluator.evaluate(model)[1])
 output = Path("results/train") / f"seed_{seed}"
 max_iterations = 1
 for iteration in range(max_iterations):
-    trained_model = trainer.train(x, y, config,
+    trained_model = trainer.train(x_train, y_train, x_eval, y_eval, config,
                                   output=output / f"trial_{iteration}", seed=seed)
+evaluator.env.close()
 ```
 
 The `if __name__ == "__main__"` block collects data once by calling `main()`,
-then creates BehaviorCloning and runs its training loop.
+splits sample indices with `random_split`, then creates BehaviorCloning and
+runs its training loop. Each observation window keeps its original order.
 Each seed has its own `seed_42/`, `seed_43/`, etc., with the collected data.
 Each iteration writes weights/history to `trial_0/`, `trial_1/`, etc. inside that seed folder.
-The class creates a CPU MLP, trains with Adam and MSE, and returns the final model
-in evaluation mode. Training hyperparameters come from the `Hyperparameter` object;
+The class creates a CPU MLP, trains with Adam and MSE, and returns the lowest-MSE
+model in evaluation mode. Training hyperparameters come from the `Hyperparameter` object;
 `config` describes the dataset and is recorded for reproducibility.
-`weights.pt` stores the model state and `training.json` stores its dimensions,
-effective hyperparameters, seed and per-epoch training MSE.
+`weights.pt` stores the final model. `best_mse.pt` stores the lowest-evaluation-MSE
+model, with `best.pt` retained as the same selection for compatibility.
+`best_reward.pt` stores the highest-reward model. `training.json` records both
+best epochs and each epoch's training MSE, evaluation MSE, closed-loop reward and
+final SoC. Without a reward evaluator, the trainer still supports MSE-only runs.
+
+The current study uses `output="results/reward_selection"`, preserving the previous
+`results/train/` experiments. The main block sets `reward_eval` to
+2023-03-01 through 2023-03-10, exclusive.
+These dates must not overlap the teacher training period; 2024 remains outside
+checkpoint selection. At every epoch, the reward evaluator resets the same
+environment and initial SoC and executes the NN with the same fixed PV rule and
+startup padding used by `test.py`. Episode records/CSVs are not saved during
+training. The scalar reward is the original negative executed cost, without a
+terminal-energy adjustment; final SoC is recorded to interpret that metric.
+The reward is used for checkpoint selection only, not as a training loss.
+This adds one full validation rollout per epoch; a longer validation period
+increases training time.
 
 For five repetitions, use seeds such as `[42, 43, 44, 45, 46]` with identical
 data, hyperparameters and evaluation dates. Pass each run's seed to `train()`
@@ -136,11 +173,12 @@ changes training randomness while preserving the scenario. Reproducibility
 assumes the same code, data, dependency versions and execution platform.
 
 When using a BehaviorCloning instance directly, its `train()` method returns a
-model and its `evaluate(x_val, y_val)` method returns MSE without updating weights. Generate
-validation data from a separate date range, with windows and teacher forecasts
-confined to that range. The trainer does not split datasets internally.
+model and its `evaluate(x_eval, y_eval)` method returns MSE without updating weights.
+The random internal split may share historical observations between samples;
+final testing uses the separate second year, outside the collected teacher horizons.
+The trainer uses the supplied split and evaluates after each training epoch.
 Hyperparameters are selected manually for now; a future Bayesian search can
-supply a new `Hyperparameter` object per trial and minimize this validation MSE.
+supply a new `Hyperparameter` object per trial and compare validation MSE and reward.
 `torch.nn.Module.train()` only switches the network's mode; the algorithm's
 `train()` method performs the optimization.
 
@@ -148,13 +186,15 @@ supply a new `Hyperparameter` object per trial and minimize this validation MSE.
 
 `test.py` loads an MLP checkpoint and runs it in OpenDSS between the selected
 dates. It reads the architecture dimensions, observation window and device ID
-from `training.json` next to `weights.pt`. Set the model path, dates, output
+from `training.json` next to the checkpoint. The main block evaluates both
+`best_mse.pt` and `best_reward.pt` into separate subdirectories. `main()` still
+accepts a single checkpoint, including older `best.pt` files. Set the model path, dates, output
 folder and seed in its main block, or call:
 
 ```python
 from test import main
 
-records, summary = main(model_path="results/train/seed_42/trial_0/weights.pt",
+records, summary = main(model_path="results/train/seed_42/trial_0/best.pt",
                         config={"case": "data/5bus-switzerland",
                                 "start_date": "2024-02-29", "end_date": "2024-03-01"},
                         output="results/test/seed_42/trial_0", seed=42)

@@ -21,7 +21,10 @@ positive device reactive power means injection. Positive grid power here means i
 
 ## Global teacher
 
-At time $t$, minimize energy cost over $K$ forecast intervals:
+For offline data collection, solve once over the complete selected period by
+default. Optionally, `block_weeks` partitions it into consecutive blocks of
+168 elapsed hours per week. For each optimization, with $t$ its first interval
+and $K$ its number of intervals, minimize:
 
 $$
 \min J_t=\sum_{k=t}^{t+K-1}\Delta t
@@ -31,8 +34,11 @@ $$
 Here powers are in kW, $c^{sell}=\rho c^{buy}$ and $J_t$ is in CHF.
 The original case has $\rho=1$. Network and device losses affect cost through
 the constraints; the implemented objective has no separate degradation penalty.
-Future loads and PV come directly from the scenario profiles, so this is a
-perfect-profile benchmark rather than a forecast-error experiment.
+Loads and PV come directly from the scenario profiles. After solving, reconstruct
+the pre-action observations along the optimized trajectory and pair each with its
+action. Blocks carry SoC, previous actions and observation windows forward, without
+lookahead beyond the current block. This does not guarantee the full-period optimum.
+The MPC evaluation baseline uses the same formulation with a rolling horizon.
 
 For a radial branch $i\rightarrow j$, the following equations use pu.
 $P,Q$ are sending-end flows, $v=|V|^2$, and $\ell=|I|^2$.
@@ -71,9 +77,13 @@ $$
 Charge/discharge powers and stored energy have configured bounds. Battery
 inverter loss is debited from stored energy. The model allows nonnegative
 charge and discharge variables simultaneously; diagnostics check their physical
-consequences. The current cyclic terminal target is 50% SoC at each horizon end.
-Initial SoC follows the teacher's predicted state during offline collection
-and the environment's executed state during MPC evaluation.
+consequences. The current cyclic terminal target is 50% SoC at the end of the
+selected optimization period. Offline optimization starts from the case's initial
+SoC; each reconstructed observation uses the preceding interval's optimized SoC.
+With weekly blocks, intermediate terminal SoC constraints are removed and only
+the last block retains the original full-period target. Solver roundoff of up to
+`1e-8` in observed SoC fractions is tolerated without clipping the state.
+During MPC evaluation, each optimization starts from the environment's executed state.
 
 The teacher also supports curtailable PV, with daytime constraints including
 $0\leq P^{PV}$, $P^{PV}+L^{PV}\leq P^{available}$,
@@ -112,35 +122,45 @@ Y_t^d=[P_t^{B,*},Q_t^{B,*}],\qquad
 \widehat{Y}_t^d=\pi_\theta(X_t^d).
 $$
 
-$Y_t^d$ selects the device's first action from the global OPF reference. It is a
+$Y_t^d$ selects the device's action at time $t$ from the global OPF reference. It is a
 requested action; executed actions and their adjustments are logged separately.
 Both target powers are in pu in the pair contract; multiply by the network
 power base to report kW and kvar.
-With $W=3$, the first two steps fill the history and 96 valid steps yield 94 pairs.
-History resets between episodes. Labels require quality["valid_for_imitation"].
+Training sets `pad_initial=True`: define $o_k^d=o_0^d$ for missing past indices
+$k<0$. With $W=3$, initial windows are $[o_0,o_0,o_0]$ and $[o_0,o_0,o_1]$;
+96 valid steps yield 96 pairs. History resets between episodes, not weekly blocks.
+Labels require quality["valid_for_imitation"].
 
 BehaviorCloning uses mean squared error between predicted and teacher actions
-and trains the MLP with Adam. Hyperparameters are supplied manually; validation
-uses separately prepared date ranges. Any future learned preprocessing must
+and trains the MLP with Adam. Hyperparameters are supplied manually; 2023 pairs
+are randomly split 80/20 for training/internal evaluation, and 2024 is reserved
+for closed-loop testing. After each epoch, MSE selects `best_mse.pt` (also saved
+as `best.pt`), while an independent closed-loop validation episode selects
+`best_reward.pt` by maximum raw reward. The main configuration uses March 1-10,
+2023 (end exclusive), outside the teacher training period, for reward validation.
+Each episode resets the same initial state and seed; final SoC is recorded
+without terminal-energy adjustment. Reward selection does not change the MSE
+training loss. Any future learned preprocessing must
 be fitted on the training partition only. Since local inputs omit information
 used by the teacher, exact imitation is not guaranteed.
 
 ## Closed-loop evaluation
 
 Execute the student command in OpenDSS and use the resulting measured state
-for the next input. Compare executed interval cost with the teacher's
-first-interval predicted cost, and use $reward_t=-cost_t^{executed}$.
+for the next input. In MPC contract checks, compare executed interval cost with
+the teacher's first-interval predicted cost. Use $reward_t=-cost_t^{executed}$.
 The horizon objective $J_t$ covers several intervals.
 
-The MPC comparison helper defaults to $K=8$ and train.py to $K=96$.
-test.py loads a trained policy and does not solve an MPC. Dates select a
-half-open dataset range; K is the maximum teacher/MPC forecast lookahead.
-The final horizons shrink to stay inside the selected range, avoiding forecast
-leakage across partitions. Choose a consistent K before a learning study. Both use fixed, uncurtailed PV with Q=0, so the two
-controllers have the same control authority over the BESS.
+The MPC comparison helper defaults to $K=8$. Offline collection optimizes the
+entire half-open dataset range selected by the training dates, optionally split
+into weekly blocks, without a rolling lookahead parameter. Its labels can differ
+from the rolling MPC baseline.
+test.py loads a trained policy and does not solve an MPC. The MPC's final horizons
+shrink to stay inside its selected range. Both controllers use fixed, uncurtailed
+PV with Q=0 and have the same control authority over the BESS.
 
 The supplied CPU model accepts float32 tensors of shape [batch, window, 6]
 and returns [batch, 2] powers in pu. Any learned preprocessing belongs inside
 the model. During startup, evaluation repeats the first observation until the
-window fills. Include this startup convention in the learning experiment;
-current pair collection retains its two-step warm-up when the window is three.
+window fills. Training uses the same repeat-first startup convention, with one
+current-action target per interval, including the beginning of the episode.

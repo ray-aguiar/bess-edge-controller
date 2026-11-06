@@ -26,6 +26,7 @@ measurements, battery state and local history.
 - [Journal research direction](journal-research.md): trustworthiness, local information limits and the proposed conference-to-journal roadmap.
 - [Experiment 001](experiments/001-teacher-environment.md): completed integration checks.
 - [Experiment 002](experiments/002-teacher-only-comparison.md): teacher-only data and independent comparison checks.
+- [Experiment 003](experiments/003-mse-reward-selection.md): per-epoch MSE/reward selection and a single-seed comparison.
 
 ## Current state
 

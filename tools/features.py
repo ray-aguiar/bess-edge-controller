@@ -20,9 +20,7 @@ def local_observation(observation, bus, device):
     measured_device = observation["bess"][device]
     return {
         "timestamp": observation["timestamp"], "dt_h": observation["dt_h"],
-        "bus": {"v_before_pu": measured_bus["v_before_pu"]["a"], "p_load_pu": measured_bus["p_load_pu"]["a"],
-                "q_load_pu": measured_bus["q_load_pu"]["a"]},
-        "device": {"soc_before_frac": measured_device["soc_before_frac"],
-                   "previous_p_pu": measured_device["previous_p_pu"]["a"],
-                   "previous_q_pu": measured_device["previous_q_pu"]["a"]},
+        "bus": {name: measured_bus[name]["a"] for name in ("v_before_pu", "p_load_pu", "q_load_pu")},
+        "device": {"soc_before_frac": measured_device["soc_before_frac"]} |
+                  {name: measured_device[name]["a"] for name in ("previous_p_pu", "previous_q_pu")},
     }
