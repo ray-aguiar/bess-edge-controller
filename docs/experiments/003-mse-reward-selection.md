@@ -72,6 +72,7 @@ were already examined in earlier pilot analysis; this is not a blind final test.
 - `test/best_mse/` and `test/best_reward/`: separate temporal test exports.
 - `results/reward_selection/comparison.json`: complete comparison metrics.
 
-The current `train.py` main block runs both selections using its `reward_eval`
-dates. `test.py` evaluates both new checkpoints into separate directories.
+This historical pilot used reward-validation dates and evaluated both checkpoints
+in separate directories. The current training code selects only by validation MSE;
+reward selection has been removed.
 This recorded pilot reused saved tensors instead of regenerating the dataset.

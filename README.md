@@ -15,7 +15,7 @@ Research scope, formulation and experiment records are in [docs/](docs/README.md
 The root Python entry points are `train.py` and `test.py`. Essential helpers
 live in `tools/`; standalone verification and profile-generation scripts live
 in `tools/scripts/`. Network architectures live in `learning/networks/` and
-learning algorithms in `learning/algorithms/`. MLP and supervised behavior cloning
+learning algorithms in `learning/algorithms/`. MLP, LSTM and supervised behavior cloning
 are implemented; other architectures and algorithms remain empty scaffolds.
 
 ## Installation
@@ -54,7 +54,7 @@ The saved configuration includes resolved dates, row offset and step count.
 ```
 
 The main block collects tensors once and trains BehaviorCloning in a loop with
-`max_iterations = 1`, saving the current comparison under `results/reward_selection/seed_43/trial_0/`.
+`max_iterations = 1`, saving the model under `results/train/supervised/lstm/seed_42/trial_0/`.
 It uses 2023 for an 80/20 random train/evaluation split (`eval_fraction=0.2`),
 with the supplied seed. `x_train`/`y_train` feed training; `x_eval`/`y_eval`
 are evaluated after every epoch. `test.py` reserves all of 2024.
@@ -114,26 +114,63 @@ PyTorch deterministic algorithms are enabled, and profiles stay chronological.
 
 ## Train a behavior-cloning policy
 
+Optional `extra_features` in the training configuration adds pre-action measurements
+and communicated device signals without changing the controlled BESS or its P/Q targets:
+
+```python
+"extra_features": {
+    "branches": ["p_flow_pu", "q_flow_pu"],
+    "bess": {"b2": ["soc_before_frac", "previous_p_pu"]},
+    "pv": {"pv1": ["available_pu", "previous_p_pu"]},
+    "grid": ["buy_price_per_kwh", "sell_price_per_kwh"],
+    "bus": ["angle_before_deg"],
+}
+```
+
+Use only device IDs present in the case: the supplied Swiss case has `b1` and
+`pv1`, but no `b2`. Omit groups you do not need, or use `{}` for the original six inputs.
+Nonempty `extra_features` automatically selects the label `"extra_features"`:
+`results/train/supervised/lstm/extra_features/seed_42/trial_0/`.
+With `extra_features={}`, the original folder structure is preserved.
+The label is saved in the configuration; set `label="extra_features"` in
+the `test.py` main block to select the experiment. Existing `local_p_flow`
+experiments keep their original paths. Test outputs keep the same hierarchy.
+Branch signals include every terminal connected to the controlled BESS bus,
+identified by element, terminal and phase; optional fields also include `current_a`
+and `current_angle_deg`. Power is positive entering the line/transformer terminal,
+following OpenDSS. Current is in amperes and angles are in degrees; these inputs
+are not standardized automatically. Teacher branch extras currently support the
+single-phase equivalent; communicated device signals retain phase names.
+
+Communication is instantaneous and uses current SoC/availability and previous
+device powers, never simultaneous new actions. `config.json` and `training.json`
+save `extra_features` and the complete ordered input paths in `config.features`.
+The six default inputs come first; extra paths are sorted by group, identifier and field.
+`test.py` restores both from the training configuration, including for older
+checkpoints without extras. The test evaluator controls the selected BESS,
+keeps other BESS commands at P=Q=0, and uses available PV with Q=0.
+
+Set `config["architecture"]` to `"lstm"` (default) or `"mlp"`. The LSTM reads
+`[batch, window, features]` in chronological order and uses its last output
+to predict the current BESS P/Q action. It has one recurrent layer; `hidden_size`
+sets its width. Its hidden state starts at zero for each window, so memory is
+limited to the supplied history. The MLP flattens the same window.
+
 Using the training tensors prepared by the main block, create the trainer and run the loop:
 
 ```python
 from pathlib import Path
 from learning.algorithms.behavior_cloning import BehaviorCloning, Hyperparameter
 
-from tools.evaluation import PolicyEvaluator
-
 hyperparameters = Hyperparameter(hidden_size=64, learning_rate=1e-3,
                                 batch_size=64, epochs=100)
 seed = 42
-reward_config = config | {"start_date": "2023-03-01", "end_date": "2023-03-10"}
-evaluator = PolicyEvaluator(reward_config, seed=seed)
-trainer = BehaviorCloning(hyperparameters, reward_evaluator=lambda model: evaluator.evaluate(model)[1])
+trainer = BehaviorCloning(hyperparameters)
 output = Path("results/train") / f"seed_{seed}"
 max_iterations = 1
 for iteration in range(max_iterations):
     trained_model = trainer.train(x_train, y_train, x_eval, y_eval, config,
                                   output=output / f"trial_{iteration}", seed=seed)
-evaluator.env.close()
 ```
 
 The `if __name__ == "__main__"` block collects data once by calling `main()`,
@@ -141,27 +178,12 @@ splits sample indices with `random_split`, then creates BehaviorCloning and
 runs its training loop. Each observation window keeps its original order.
 Each seed has its own `seed_42/`, `seed_43/`, etc., with the collected data.
 Each iteration writes weights/history to `trial_0/`, `trial_1/`, etc. inside that seed folder.
-The class creates a CPU MLP, trains with Adam and MSE, and returns the lowest-MSE
+The class creates the selected CPU network, trains with Adam and MSE, and returns the lowest-MSE
 model in evaluation mode. Training hyperparameters come from the `Hyperparameter` object;
 `config` describes the dataset and is recorded for reproducibility.
-`weights.pt` stores the final model. `best_mse.pt` stores the lowest-evaluation-MSE
-model, with `best.pt` retained as the same selection for compatibility.
-`best_reward.pt` stores the highest-reward model. `training.json` records both
-best epochs and each epoch's training MSE, evaluation MSE, closed-loop reward and
-final SoC. Without a reward evaluator, the trainer still supports MSE-only runs.
-
-The current study uses `output="results/reward_selection"`, preserving the previous
-`results/train/` experiments. The main block sets `reward_eval` to
-2023-03-01 through 2023-03-10, exclusive.
-These dates must not overlap the teacher training period; 2024 remains outside
-checkpoint selection. At every epoch, the reward evaluator resets the same
-environment and initial SoC and executes the NN with the same fixed PV rule and
-startup padding used by `test.py`. Episode records/CSVs are not saved during
-training. The scalar reward is the original negative executed cost, without a
-terminal-energy adjustment; final SoC is recorded to interpret that metric.
-The reward is used for checkpoint selection only, not as a training loss.
-This adds one full validation rollout per epoch; a longer validation period
-increases training time.
+`weights.pt` stores the final model; `best.pt` stores the lowest-validation-MSE
+model. `training.json` records the best epoch and training/validation MSE history.
+Training and checkpoint selection do not run the environment or use reward.
 
 For five repetitions, use seeds such as `[42, 43, 44, 45, 46]` with identical
 data, hyperparameters and evaluation dates. Pass each run's seed to `train()`
@@ -178,24 +200,24 @@ The random internal split may share historical observations between samples;
 final testing uses the separate second year, outside the collected teacher horizons.
 The trainer uses the supplied split and evaluates after each training epoch.
 Hyperparameters are selected manually for now; a future Bayesian search can
-supply a new `Hyperparameter` object per trial and compare validation MSE and reward.
+supply a new `Hyperparameter` object per trial and compare validation MSE.
 `torch.nn.Module.train()` only switches the network's mode; the algorithm's
 `train()` method performs the optimization.
 
 ## Test a trained policy
 
-`test.py` loads an MLP checkpoint and runs it in OpenDSS between the selected
-dates. It reads the architecture dimensions, observation window and device ID
-from `training.json` next to the checkpoint. The main block evaluates both
-`best_mse.pt` and `best_reward.pt` into separate subdirectories. `main()` still
-accepts a single checkpoint, including older `best.pt` files. Set the model path, dates, output
+`test.py` loads an MLP or LSTM checkpoint and runs it in OpenDSS between the selected
+dates. Set `config["architecture"]` manually to `"mlp"` or `"lstm"`, matching the
+checkpoint. It reads the architecture dimensions, observation window and device ID
+from `training.json` next to the checkpoint. The main block evaluates
+`results/train/supervised/lstm/seed_42/trial_0/best.pt`. `main()` accepts a single checkpoint. Set the model path, dates, output
 folder and seed in its main block, or call:
 
 ```python
 from test import main
 
-records, summary = main(model_path="results/train/seed_42/trial_0/best.pt",
-                        config={"case": "data/5bus-switzerland",
+records, summary = main(model_path="results/train/supervised/lstm/seed_42/trial_0/best.pt",
+                        config={"case": "data/5bus-switzerland", "architecture": "lstm",
                                 "start_date": "2024-02-29", "end_date": "2024-03-01"},
                         output="results/test/seed_42/trial_0", seed=42)
 ```
@@ -204,7 +226,7 @@ The CPU `torch.nn.Module` receives float32 input `[batch, window, 6]` and
 returns `[batch, 2]` in pu. Input features, in order, are current pre-action
 voltage, current local P/Q demand, current SoC, and previous executed
 BESS P/Q. Outputs are charging-positive active power and injection-positive
-reactive power. The current MLP uses the same encoding as training.
+reactive power. Both networks use the same encoding as training.
 The first observation is repeated to fill the NN window at episode startup.
 Testing currently supports one BESS and reads its actual SoC and executed
 previous controls from the environment at every step.

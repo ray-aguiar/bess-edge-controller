@@ -134,13 +134,10 @@ Labels require quality["valid_for_imitation"].
 BehaviorCloning uses mean squared error between predicted and teacher actions
 and trains the MLP with Adam. Hyperparameters are supplied manually; 2023 pairs
 are randomly split 80/20 for training/internal evaluation, and 2024 is reserved
-for closed-loop testing. After each epoch, MSE selects `best_mse.pt` (also saved
-as `best.pt`), while an independent closed-loop validation episode selects
-`best_reward.pt` by maximum raw reward. The main configuration uses March 1-10,
-2023 (end exclusive), outside the teacher training period, for reward validation.
-Each episode resets the same initial state and seed; final SoC is recorded
-without terminal-energy adjustment. Reward selection does not change the MSE
-training loss. Any future learned preprocessing must
+for closed-loop testing. After each epoch, validation MSE selects `best.pt`.
+No environment rollout or reward is used during training or checkpoint selection.
+Cost, reward and final SoC are measured during closed-loop testing.
+Any future learned preprocessing must
 be fitted on the training partition only. Since local inputs omit information
 used by the teacher, exact imitation is not guaranteed.
 

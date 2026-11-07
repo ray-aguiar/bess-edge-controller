@@ -22,7 +22,7 @@
     "p_import_max_kw": 2000.0,
     "p_export_max_kw": 2000.0,
     "q_max_kvar": 2000.0,
-    "feed_in_tariff_ratio": 1.0
+    "feed_in_tariff_ratio": 0.2
   },
   "voltage_limits": {
     "v_min_pu": 0.95,

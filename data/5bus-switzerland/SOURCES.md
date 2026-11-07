@@ -105,11 +105,14 @@ estatísticas anuais e hashes SHA-256 dos dados e do gerador.
 `config.json` seleciona `single_phase_socp`. Para resolver o OPF, use horizontes
 de treinamento limitados; os dois anos completos contêm 70.176 períodos.
 
-**Limitação econômica:** `grid.feed_in_tariff_ratio=1.0` foi preservado. A
-remuneração de exportação ainda é igual ao preço de compra e não foi calibrada
-com uma tarifa suíça de injeção. Com preço constante dentro do ano e compra/venda
-simétricas, o cenário não oferece arbitragem tarifária intradiária. Isso deve
-ser considerado ao interpretar as ações de bateria usadas como rótulos.
+**Sale-price scenario (2026-11-06):** `sell_price_per_kwh` in `price.csv`
+is 20% of the unchanged purchase-price column `price_per_kwh`, in CHF/kWh.
+This ratio is an experimental assumption, not a sourced Swiss feed-in tariff.
+`grid.feed_in_tariff_ratio=0.2` applies the same relationship in the teacher
+and environment; their loaders still calculate sale prices from this ratio.
+The generator reproduces the new column using the configured ratio.
+The former symmetric purchase/sale-price scenario used ratio 1.0; previously
+saved training and test results retain that original economic assumption.
 
 ## Validação realizada em 30/10/2026
 

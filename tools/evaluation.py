@@ -1,4 +1,4 @@
-"""Shared closed-loop policy evaluation for checkpoint selection and testing."""
+"""Closed-loop evaluation of trained policies in the test environment."""
 from collections import deque
 
 import torch
@@ -17,9 +17,8 @@ class PolicyEvaluator:
         self.config = config | period
         self.seed = seed
         self.device = config["device"]
-        if len(case.bess) != 1 or case.bess[0].id != self.device:
-            raise ValueError("The case must contain one BESS matching the trained device")
-        self.bus = case.buses[case.bess[0].bus].name
+        device = next(device for device in case.bess if device.id == self.device)
+        self.bus = case.buses[device.bus].name
         self.env = MicrogridEnv(EnvironmentConfig(case.config_path, episode_steps=period["steps"],
                                                 start_step=period["start_step"]))
 
@@ -30,15 +29,16 @@ class PolicyEvaluator:
         initial_soc = observation["bess"][self.device]["soc_before_frac"]
         records, total_reward, total_cost = [], 0.0, 0.0
         for step in range(self.config["steps"]):
-            state = local_observation(observation, self.bus, self.device)
+            state = local_observation(observation, self.bus, self.device, self.config.get("extra_features"))
             history.append(state)
             window = [history[0]] * (history.maxlen - len(history)) + list(history)
             with torch.inference_mode():
-                predicted = model(encode(window).unsqueeze(0)).reshape(-1)
+                predicted = model(encode(window, self.config.get("features")).unsqueeze(0)).reshape(-1)
             if predicted.numel() != len(TARGETS):
                 raise ValueError("The model must return active and reactive BESS power")
             action = {
-                "bess": {self.device: dict(zip(TARGETS, predicted.tolist()))},
+                "bess": {key: {"p_net_pu": 0.0, "q_injection_pu": 0.0} for key in observation["bess"]} |
+                        {self.device: dict(zip(TARGETS, predicted.tolist()))},
                 "pv": {key: {"generation_pu": sum(values["available_pu"].values()), "q_injection_pu": 0.0}
                        for key, values in observation["pv"].items()},
             }

@@ -61,7 +61,8 @@
     "currency": "CHF",
     "vat_included": false,
     "intraday_variation": false,
-    "export_price": "not calibrated; config.json still uses feed_in_tariff_ratio=1.0"
+    "export_price": "scenario assumption: purchase price multiplied by feed_in_tariff_ratio",
+    "feed_in_tariff_ratio": 0.2
   },
   "yearly": {
     "2023": {
@@ -86,9 +87,10 @@
   },
   "sha256": {
     "demand.csv": "c6e6a9285bbeb411a9739980ebee821c43846eed578f4bb6d47a7905591f5a84",
-    "price.csv": "4843a4858b5d54b889051234682d59260c7ac7af8964dfce8e8e3185e19da615",
+    "price.csv": "239a3c2b078495e4d883558766b0bf425b38e1f0b1f9d58c6ba2af2e081ba956",
     "pv.csv": "f5bbb4e4fe64f84731d91ac2a089b37e95c70edfd1dfdef9dffd4c924b24710d",
     "generate_profiles.py": "ba8c0af3ebfc50d03e1ae18790063206578c126709de92a151130c461395a7cb",
-    "sources/open_meteo_era5.json": "78749593a45202cf9de1b144c1c1b00f8eb15a60dd1e75ebeb2ea6dbff6c86b5"
+    "sources/open_meteo_era5.json": "78749593a45202cf9de1b144c1c1b00f8eb15a60dd1e75ebeb2ea6dbff6c86b5",
+    "../../tools/scripts/generate_profiles.py": "265f3a82a7c5b31978df31e9ff28acc9d6fda63d4a7a9190b89b13dbc32269e3"
   }
 }

@@ -147,6 +147,8 @@ def main():
     weather, request, raw_weather = load_weather(index)
     power_kw, diagnostics = solar_profile(index, weather, pv["p_max_kw"])
     price = pd.DataFrame({"timestamp": timestamp, "price_per_kwh": [TARIFFS[y] for y in years]})
+    ratio = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))["grid"]["feed_in_tariff_ratio"]
+    price["sell_price_per_kwh"] = price["price_per_kwh"] * ratio
     generation = pd.DataFrame({"timestamp": timestamp, "PV5": power_kw.to_numpy()})
     price.to_csv(ROOT / "price.csv", index=False, float_format="%.6f", lineterminator="\n")
     generation.to_csv(ROOT / "pv.csv", index=False, float_format="%.6f", lineterminator="\n")
@@ -187,7 +189,8 @@ def main():
             "source": "ElCom 2024 announcement, 2023 comparison updated to 27.20 ct/kWh",
             "consumer_category": "H4, household 4500 kWh/year, national median benchmark",
             "currency": "CHF", "vat_included": False, "intraday_variation": False,
-            "export_price": "not calibrated; config.json still uses feed_in_tariff_ratio=1.0",
+            "export_price": "scenario assumption: purchase price multiplied by feed_in_tariff_ratio",
+            "feed_in_tariff_ratio": ratio,
         },
         "yearly": yearly,
         "versions": {"python": platform.python_version(), "numpy": np.__version__, "pandas": pd.__version__},
