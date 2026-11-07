@@ -46,8 +46,9 @@ including cost, reward and final SoC. Experiment 003 records the earlier reward-
 Use the existing Swiss profiles and document their origin in
 [SOURCES.md](../data/5bus-switzerland/SOURCES.md). Count attempted, rejected and
 accepted labels, report rejection reasons, and inspect active/reactive target
-distributions. The current flat, symmetric tariff produces little active
-battery dispatch, so the one-day check alone is insufficient as a learning dataset.
+distributions. The current tariff is flat within each year, with sale price equal to 20% of
+purchase price. Earlier symmetric-tariff runs produced little active battery
+dispatch. Keep these scenarios separate and inspect the new target distribution.
 
 ## Comparisons and metrics
 
@@ -62,7 +63,7 @@ commands and battery energy throughput. Report final SoC so that cost savings
 are not confused with consuming additional stored energy.
 
 The evaluator uses the same fixed PV generation and zero reactive
-PV power for both controllers. It supports one BESS, uses environment
+PV power for both controllers. It controls one selected BESS, keeps other BESS commands at zero, uses environment
 action-limit handling and repeats the first local observation to fill the NN
 window at startup. Report requested/executed adjustments and the effects of
 startup padding; a numerical smoke test is not trained-policy validation.

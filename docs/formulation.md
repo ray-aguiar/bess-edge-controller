@@ -32,7 +32,7 @@ $$
 $$
 
 Here powers are in kW, $c^{sell}=\rho c^{buy}$ and $J_t$ is in CHF.
-The original case has $\rho=1$. Network and device losses affect cost through
+The current case has $\rho=0.2$; older symmetric-tariff experiments used $\rho=1$. Network and device losses affect cost through
 the constraints; the implemented objective has no separate degradation penalty.
 Loads and PV come directly from the scenario profiles. After solving, reconstruct
 the pre-action observations along the optimized trajectory and pair each with its
@@ -156,8 +156,8 @@ test.py loads a trained policy and does not solve an MPC. The MPC's final horizo
 shrink to stay inside its selected range. Both controllers use fixed, uncurtailed
 PV with Q=0 and have the same control authority over the BESS.
 
-The supplied CPU model accepts float32 tensors of shape [batch, window, 6]
-and returns [batch, 2] powers in pu. Any learned preprocessing belongs inside
+The supplied CPU model accepts float32 tensors of shape [batch, window, F]
+and returns [batch, 2] powers in pu. F is six base features plus selected extras. Any learned preprocessing belongs inside
 the model. During startup, evaluation repeats the first observation until the
 window fills. Training uses the same repeat-first startup convention, with one
 current-action target per interval, including the beginning of the episode.

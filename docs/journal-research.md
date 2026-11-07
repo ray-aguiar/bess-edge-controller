@@ -1,6 +1,6 @@
 # Assessing trustworthiness of local BESS imitation control
 
-Research proposal, 2026-11-04. Contributions and experiments below are planned;
+Research proposal, updated 2026-11-07. Contributions and experiments below are planned;
 the existing integration checks do not establish policy performance or safety
 guarantees. This document guides a possible journal extension of an initial
 conference study.
@@ -18,10 +18,21 @@ analysis or finding about storage dynamics and local information.
 
 ## Scope and information available to the controller
 
-The scope is single-phase BESS control, initially using `5bus-switzerland`.
-Three-phase control and incentive/budget mechanisms belong to a separate
-project. Additional single-phase feeders and battery locations are candidates
-for validation of this research question.
+The implementation scope is the local BESS controller, initially evaluated in
+the single-phase `5bus-switzerland` case. Three-phase BESS experiments are a
+possible extension and require an appropriate policy/input representation.
+Central orchestration and controllers for PV or EV charging belong to separate
+projects; their services and budgets motivate future coordination studies.
+Additional feeders and battery locations are candidates for validation.
+
+Current experiments use behavior cloning. Reinforcement learning for the local
+BESS policy is a future comparison; the other algorithm modules remain scaffolds.
+The environment defaults to executed energy cost. Its `Reward` class also exposes
+local voltage, net import, reactive exchange and P/Q-tracking penalties, with
+three-phase VUF support. These optional methods do not change the current MSE
+training objective or enforce network safety by themselves. Their formulation
+and evaluation belong to local-controller experiments; a central budget allocator
+is outside this repository's implementation scope.
 
 | Component | Available information and responsibility |
 | --- | --- |
@@ -33,8 +44,10 @@ for validation of this research question.
 The current numerical input is voltage measured before the new action,
 current local P/Q demand, pre-action SoC and previous BESS P/Q. A chronological
 window forms X; the optimized P/Q action at its last timestamp forms Y. Timestamp and
-interval duration are metadata. Prices, forecasts, remote PV and other buses'
-measurements are excluded from NN inputs.
+interval duration are metadata. The six-feature baseline excludes prices, forecasts and remote measurements.
+Local branch-terminal flows can be added through `extra_features`. The API also
+supports communicated device signals, which must be identified as a separate
+information-access experiment rather than a strictly local-measurement policy.
 
 Pre-action voltage uses current loads and held previous device powers, with PV
 capped by availability. It is recalculated during collection without advancing
