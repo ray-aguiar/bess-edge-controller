@@ -5,7 +5,7 @@
   "description": "Rede de distribuição, 123 barras, 1 transformador",
   "files": {
     "demand": "demand.csv",
-    "prices": "price.csv",
+    "prices": "../prices/standard_prices.csv",
     "devices": "devices.json"
   },
   "base": {

@@ -5,7 +5,7 @@
   "description": "Laboratório de Redes Elétricas Inteligentes, 13 barras, 1 BESS e 1 PV",
   "files": {
     "demand": "demand.csv",
-    "prices": "price.csv",
+    "prices": "../prices/standard_prices.csv",
     "devices": "devices.json"
   },
   "base": {
