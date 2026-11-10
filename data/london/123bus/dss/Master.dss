@@ -1,0 +1,145 @@
+Clear
+New Circuit.case123 phases=3 bus1=sourcebus basekV=69 pu=1.0 angle=0 frequency=60
+
+! Transformer
+New Transformer.SubXF Phases=3 Windings=2 Xhl=4.0
+Edit Transformer.SubXF wdg=1 bus=sourcebus conn=delta kV=69 kVA=10000 %r=0.5
+Edit Transformer.SubXF wdg=2 bus=bus_001 conn=wye kV=4.16 kVA=10000 %r=0.5
+
+! LineCodes
+New LineCode.LC1 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.086666667 | 0.029545455 0.088371212 | 0.02907197 0.029924242 0.087405303] Xmatrix=[0.204166667 | 0.095018939 0.198522727 | 0.072897727 0.080227273 0.201723485] Cmatrix=[2.851710072 | -0.920293787 3.004631862 | -0.350755566 -0.585011253 2.71134756]
+New LineCode.LC2 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.088371212 | 0.02992424 0.087405303 | 0.029545455 0.02907197 0.086666667] Xmatrix=[0.198522727 | 0.080227273 0.201723485 | 0.095018939 0.072897727 0.204166667] Cmatrix=[3.004631862 | -0.585011253 2.71134756 | -0.920293787 -0.350755566 2.851710072]
+New LineCode.LC3 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.087405303 | 0.02907197 0.086666667 | 0.029924242 0.029545455 0.088371212] Xmatrix=[0.201723485 | 0.072897727 0.204166667 | 0.080227273 0.095018939 0.198522727] Cmatrix=[2.71134756 | -0.350755566 2.851710072 | -0.585011253 -0.920293787 3.004631862]
+New LineCode.LC4 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.087405303 | 0.029924242 0.088371212 | 0.02907197 0.029545455 0.086666667] Xmatrix=[0.201723485 | 0.080227273 0.198522727 | 0.072897727 0.095018939 0.204166667] Cmatrix=[2.71134756 | -0.585011253 3.004631862 | -0.350755566 -0.920293787 2.851710072]
+New LineCode.LC5 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.088371212 | 0.029545455 0.086666667 | 0.029924242 0.02907197 0.087405303] Xmatrix=[0.198522727 | 0.095018939 0.204166667 | 0.080227273 0.072897727 0.201723485] Cmatrix=[3.004631862 | -0.920293787 2.851710072 | -0.585011253 -0.350755566 2.71134756]
+New LineCode.LC6 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.086666667 | 0.02907197 0.087405303 | 0.029545455 0.029924242 0.088371212] Xmatrix=[0.204166667 | 0.072897727 0.201723485 | 0.095018939 0.080227273 0.198522727] Cmatrix=[2.851710072 | -0.350755566 2.71134756 | -0.920293787 -0.585011253 3.004631862]
+New LineCode.LC12 nphases=3 BaseFreq=60 units=kft Rmatrix=[0.288049242 | 0.09844697 0.29032197 | 0.093257576 0.09844697 0.288049242] Xmatrix=[0.142443182 | 0.052556818 0.135643939 | 0.040852273 0.052556818 0.142443182] Cmatrix=[33.77150149 | 0 33.77150149 | 0 0 33.77150149]
+
+! Lines
+New Line.Line_001_002 phases=3 bus1=bus_001.1.2.3 bus2=bus_002.1.2.3 LineCode=LC1 Length=0.175 units=kft
+New Line.Line_001_003 phases=3 bus1=bus_001.1.2.3 bus2=bus_003.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_001_007 phases=3 bus1=bus_001.1.2.3 bus2=bus_007.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_003_004 phases=3 bus1=bus_003.1.2.3 bus2=bus_004.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_003_005 phases=3 bus1=bus_003.1.2.3 bus2=bus_005.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_005_006 phases=3 bus1=bus_005.1.2.3 bus2=bus_006.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_007_008 phases=3 bus1=bus_007.1.2.3 bus2=bus_008.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_008_012 phases=3 bus1=bus_008.1.2.3 bus2=bus_012.1.2.3 LineCode=LC1 Length=0.225 units=kft
+New Line.Line_008_009 phases=3 bus1=bus_008.1.2.3 bus2=bus_009.1.2.3 LineCode=LC1 Length=0.225 units=kft
+New Line.Line_008_013 phases=3 bus1=bus_008.1.2.3 bus2=bus_013.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_009_014 phases=3 bus1=bus_009.1.2.3 bus2=bus_014.1.2.3 LineCode=LC1 Length=0.425 units=kft
+New Line.Line_013_034 phases=3 bus1=bus_013.1.2.3 bus2=bus_034.1.2.3 LineCode=LC1 Length=0.15 units=kft
+New Line.Line_013_018 phases=3 bus1=bus_013.1.2.3 bus2=bus_018.1.2.3 LineCode=LC2 Length=0.825 units=kft
+New Line.Line_014_011 phases=3 bus1=bus_014.1.2.3 bus2=bus_011.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_014_010 phases=3 bus1=bus_014.1.2.3 bus2=bus_010.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_015_016 phases=3 bus1=bus_015.1.2.3 bus2=bus_016.1.2.3 LineCode=LC1 Length=0.375 units=kft
+New Line.Line_015_017 phases=3 bus1=bus_015.1.2.3 bus2=bus_017.1.2.3 LineCode=LC1 Length=0.35 units=kft
+New Line.Line_018_019 phases=3 bus1=bus_018.1.2.3 bus2=bus_019.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_018_021 phases=3 bus1=bus_018.1.2.3 bus2=bus_021.1.2.3 LineCode=LC2 Length=0.3 units=kft
+New Line.Line_019_020 phases=3 bus1=bus_019.1.2.3 bus2=bus_020.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_021_022 phases=3 bus1=bus_021.1.2.3 bus2=bus_022.1.2.3 LineCode=LC1 Length=0.525 units=kft
+New Line.Line_021_023 phases=3 bus1=bus_021.1.2.3 bus2=bus_023.1.2.3 LineCode=LC2 Length=0.25 units=kft
+New Line.Line_023_024 phases=3 bus1=bus_023.1.2.3 bus2=bus_024.1.2.3 LineCode=LC1 Length=0.55 units=kft
+New Line.Line_023_025 phases=3 bus1=bus_023.1.2.3 bus2=bus_025.1.2.3 LineCode=LC2 Length=0.275 units=kft
+New Line.Line_025_026 phases=3 bus1=bus_025.1.2.3 bus2=bus_026.1.2.3 LineCode=LC1 Length=0.35 units=kft
+New Line.Line_025_028 phases=3 bus1=bus_025.1.2.3 bus2=bus_028.1.2.3 LineCode=LC2 Length=0.2 units=kft
+New Line.Line_026_027 phases=3 bus1=bus_026.1.2.3 bus2=bus_027.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_026_031 phases=3 bus1=bus_026.1.2.3 bus2=bus_031.1.2.3 LineCode=LC1 Length=0.225 units=kft
+New Line.Line_027_033 phases=3 bus1=bus_027.1.2.3 bus2=bus_033.1.2.3 LineCode=LC1 Length=0.5 units=kft
+New Line.Line_028_029 phases=3 bus1=bus_028.1.2.3 bus2=bus_029.1.2.3 LineCode=LC2 Length=0.3 units=kft
+New Line.Line_029_030 phases=3 bus1=bus_029.1.2.3 bus2=bus_030.1.2.3 LineCode=LC2 Length=0.35 units=kft
+New Line.Line_030_120 phases=3 bus1=bus_030.1.2.3 bus2=bus_120.1.2.3 LineCode=LC2 Length=0.2 units=kft
+New Line.Line_031_032 phases=3 bus1=bus_031.1.2.3 bus2=bus_032.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_034_015 phases=3 bus1=bus_034.1.2.3 bus2=bus_015.1.2.3 LineCode=LC1 Length=0.1 units=kft
+New Line.Line_035_036 phases=3 bus1=bus_035.1.2.3 bus2=bus_036.1.2.3 LineCode=LC1 Length=0.65 units=kft
+New Line.Line_035_040 phases=3 bus1=bus_035.1.2.3 bus2=bus_040.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_036_037 phases=3 bus1=bus_036.1.2.3 bus2=bus_037.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_036_038 phases=3 bus1=bus_036.1.2.3 bus2=bus_038.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_038_039 phases=3 bus1=bus_038.1.2.3 bus2=bus_039.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_040_041 phases=3 bus1=bus_040.1.2.3 bus2=bus_041.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_040_042 phases=3 bus1=bus_040.1.2.3 bus2=bus_042.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_042_043 phases=3 bus1=bus_042.1.2.3 bus2=bus_043.1.2.3 LineCode=LC1 Length=0.5 units=kft
+New Line.Line_042_044 phases=3 bus1=bus_042.1.2.3 bus2=bus_044.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_044_045 phases=3 bus1=bus_044.1.2.3 bus2=bus_045.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_044_047 phases=3 bus1=bus_044.1.2.3 bus2=bus_047.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_045_046 phases=3 bus1=bus_045.1.2.3 bus2=bus_046.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_047_048 phases=3 bus1=bus_047.1.2.3 bus2=bus_048.1.2.3 LineCode=LC4 Length=0.15 units=kft
+New Line.Line_047_049 phases=3 bus1=bus_047.1.2.3 bus2=bus_049.1.2.3 LineCode=LC4 Length=0.25 units=kft
+New Line.Line_049_050 phases=3 bus1=bus_049.1.2.3 bus2=bus_050.1.2.3 LineCode=LC4 Length=0.25 units=kft
+New Line.Line_050_051 phases=3 bus1=bus_050.1.2.3 bus2=bus_051.1.2.3 LineCode=LC4 Length=0.25 units=kft
+New Line.Line_051_116 phases=3 bus1=bus_051.1.2.3 bus2=bus_116.1.2.3 LineCode=LC4 Length=0.5 units=kft
+New Line.Line_052_053 phases=3 bus1=bus_052.1.2.3 bus2=bus_053.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_053_054 phases=3 bus1=bus_053.1.2.3 bus2=bus_054.1.2.3 LineCode=LC1 Length=0.125 units=kft
+New Line.Line_054_055 phases=3 bus1=bus_054.1.2.3 bus2=bus_055.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_054_057 phases=3 bus1=bus_054.1.2.3 bus2=bus_057.1.2.3 LineCode=LC3 Length=0.35 units=kft
+New Line.Line_055_056 phases=3 bus1=bus_055.1.2.3 bus2=bus_056.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_057_058 phases=3 bus1=bus_057.1.2.3 bus2=bus_058.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_057_060 phases=3 bus1=bus_057.1.2.3 bus2=bus_060.1.2.3 LineCode=LC3 Length=0.75 units=kft
+New Line.Line_058_059 phases=3 bus1=bus_058.1.2.3 bus2=bus_059.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_060_061 phases=3 bus1=bus_060.1.2.3 bus2=bus_061.1.2.3 LineCode=LC5 Length=0.55 units=kft
+New Line.Line_060_062 phases=3 bus1=bus_060.1.2.3 bus2=bus_062.1.2.3 LineCode=LC12 Length=0.25 units=kft
+New Line.Line_062_063 phases=3 bus1=bus_062.1.2.3 bus2=bus_063.1.2.3 LineCode=LC12 Length=0.175 units=kft
+New Line.Line_063_064 phases=3 bus1=bus_063.1.2.3 bus2=bus_064.1.2.3 LineCode=LC12 Length=0.35 units=kft
+New Line.Line_064_065 phases=3 bus1=bus_064.1.2.3 bus2=bus_065.1.2.3 LineCode=LC12 Length=0.425 units=kft
+New Line.Line_065_066 phases=3 bus1=bus_065.1.2.3 bus2=bus_066.1.2.3 LineCode=LC12 Length=0.325 units=kft
+New Line.Line_067_068 phases=3 bus1=bus_067.1.2.3 bus2=bus_068.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_067_072 phases=3 bus1=bus_067.1.2.3 bus2=bus_072.1.2.3 LineCode=LC3 Length=0.275 units=kft
+New Line.Line_067_097 phases=3 bus1=bus_067.1.2.3 bus2=bus_097.1.2.3 LineCode=LC3 Length=0.25 units=kft
+New Line.Line_068_069 phases=3 bus1=bus_068.1.2.3 bus2=bus_069.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_069_070 phases=3 bus1=bus_069.1.2.3 bus2=bus_070.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_070_071 phases=3 bus1=bus_070.1.2.3 bus2=bus_071.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_072_073 phases=3 bus1=bus_072.1.2.3 bus2=bus_073.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_072_076 phases=3 bus1=bus_072.1.2.3 bus2=bus_076.1.2.3 LineCode=LC3 Length=0.2 units=kft
+New Line.Line_073_074 phases=3 bus1=bus_073.1.2.3 bus2=bus_074.1.2.3 LineCode=LC1 Length=0.35 units=kft
+New Line.Line_074_075 phases=3 bus1=bus_074.1.2.3 bus2=bus_075.1.2.3 LineCode=LC1 Length=0.4 units=kft
+New Line.Line_076_077 phases=3 bus1=bus_076.1.2.3 bus2=bus_077.1.2.3 LineCode=LC6 Length=0.4 units=kft
+New Line.Line_076_086 phases=3 bus1=bus_076.1.2.3 bus2=bus_086.1.2.3 LineCode=LC3 Length=0.7 units=kft
+New Line.Line_077_078 phases=3 bus1=bus_077.1.2.3 bus2=bus_078.1.2.3 LineCode=LC6 Length=0.1 units=kft
+New Line.Line_078_079 phases=3 bus1=bus_078.1.2.3 bus2=bus_079.1.2.3 LineCode=LC6 Length=0.225 units=kft
+New Line.Line_078_080 phases=3 bus1=bus_078.1.2.3 bus2=bus_080.1.2.3 LineCode=LC6 Length=0.475 units=kft
+New Line.Line_080_081 phases=3 bus1=bus_080.1.2.3 bus2=bus_081.1.2.3 LineCode=LC6 Length=0.175 units=kft
+New Line.Line_081_082 phases=3 bus1=bus_081.1.2.3 bus2=bus_082.1.2.3 LineCode=LC6 Length=0.25 units=kft
+New Line.Line_081_084 phases=3 bus1=bus_081.1.2.3 bus2=bus_084.1.2.3 LineCode=LC1 Length=0.675 units=kft
+New Line.Line_082_083 phases=3 bus1=bus_082.1.2.3 bus2=bus_083.1.2.3 LineCode=LC6 Length=0.25 units=kft
+New Line.Line_084_085 phases=3 bus1=bus_084.1.2.3 bus2=bus_085.1.2.3 LineCode=LC1 Length=0.475 units=kft
+New Line.Line_086_087 phases=3 bus1=bus_086.1.2.3 bus2=bus_087.1.2.3 LineCode=LC6 Length=0.45 units=kft
+New Line.Line_087_088 phases=3 bus1=bus_087.1.2.3 bus2=bus_088.1.2.3 LineCode=LC1 Length=0.175 units=kft
+New Line.Line_087_089 phases=3 bus1=bus_087.1.2.3 bus2=bus_089.1.2.3 LineCode=LC6 Length=0.275 units=kft
+New Line.Line_089_090 phases=3 bus1=bus_089.1.2.3 bus2=bus_090.1.2.3 LineCode=LC1 Length=0.25 units=kft
+New Line.Line_089_091 phases=3 bus1=bus_089.1.2.3 bus2=bus_091.1.2.3 LineCode=LC6 Length=0.225 units=kft
+New Line.Line_091_092 phases=3 bus1=bus_091.1.2.3 bus2=bus_092.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_091_093 phases=3 bus1=bus_091.1.2.3 bus2=bus_093.1.2.3 LineCode=LC6 Length=0.225 units=kft
+New Line.Line_093_094 phases=3 bus1=bus_093.1.2.3 bus2=bus_094.1.2.3 LineCode=LC1 Length=0.275 units=kft
+New Line.Line_093_095 phases=3 bus1=bus_093.1.2.3 bus2=bus_095.1.2.3 LineCode=LC6 Length=0.3 units=kft
+New Line.Line_095_096 phases=3 bus1=bus_095.1.2.3 bus2=bus_096.1.2.3 LineCode=LC1 Length=0.2 units=kft
+New Line.Line_097_098 phases=3 bus1=bus_097.1.2.3 bus2=bus_098.1.2.3 LineCode=LC3 Length=0.275 units=kft
+New Line.Line_098_099 phases=3 bus1=bus_098.1.2.3 bus2=bus_099.1.2.3 LineCode=LC3 Length=0.55 units=kft
+New Line.Line_099_100 phases=3 bus1=bus_099.1.2.3 bus2=bus_100.1.2.3 LineCode=LC3 Length=0.3 units=kft
+New Line.Line_100_122 phases=3 bus1=bus_100.1.2.3 bus2=bus_122.1.2.3 LineCode=LC3 Length=0.8 units=kft
+New Line.Line_119_101 phases=3 bus1=bus_119.1.2.3 bus2=bus_101.1.2.3 LineCode=LC3 Length=0.25 units=kft
+New Line.Line_101_102 phases=3 bus1=bus_101.1.2.3 bus2=bus_102.1.2.3 LineCode=LC1 Length=0.225 units=kft
+New Line.Line_101_105 phases=3 bus1=bus_101.1.2.3 bus2=bus_105.1.2.3 LineCode=LC3 Length=0.275 units=kft
+New Line.Line_102_103 phases=3 bus1=bus_102.1.2.3 bus2=bus_103.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_103_104 phases=3 bus1=bus_103.1.2.3 bus2=bus_104.1.2.3 LineCode=LC1 Length=0.7 units=kft
+New Line.Line_105_106 phases=3 bus1=bus_105.1.2.3 bus2=bus_106.1.2.3 LineCode=LC1 Length=0.225 units=kft
+New Line.Line_105_108 phases=3 bus1=bus_105.1.2.3 bus2=bus_108.1.2.3 LineCode=LC3 Length=0.325 units=kft
+New Line.Line_106_107 phases=3 bus1=bus_106.1.2.3 bus2=bus_107.1.2.3 LineCode=LC1 Length=0.575 units=kft
+New Line.Line_108_109 phases=3 bus1=bus_108.1.2.3 bus2=bus_109.1.2.3 LineCode=LC1 Length=0.45 units=kft
+New Line.Line_108_121 phases=3 bus1=bus_108.1.2.3 bus2=bus_121.1.2.3 LineCode=LC3 Length=1 units=kft
+New Line.Line_109_110 phases=3 bus1=bus_109.1.2.3 bus2=bus_110.1.2.3 LineCode=LC1 Length=0.3 units=kft
+New Line.Line_110_111 phases=3 bus1=bus_110.1.2.3 bus2=bus_111.1.2.3 LineCode=LC1 Length=0.575 units=kft
+New Line.Line_110_112 phases=3 bus1=bus_110.1.2.3 bus2=bus_112.1.2.3 LineCode=LC1 Length=0.125 units=kft
+New Line.Line_112_113 phases=3 bus1=bus_112.1.2.3 bus2=bus_113.1.2.3 LineCode=LC1 Length=0.525 units=kft
+New Line.Line_113_114 phases=3 bus1=bus_113.1.2.3 bus2=bus_114.1.2.3 LineCode=LC1 Length=0.325 units=kft
+New Line.Line_115_035 phases=3 bus1=bus_115.1.2.3 bus2=bus_035.1.2.3 LineCode=LC4 Length=0.375 units=kft
+New Line.Line_117_052 phases=3 bus1=bus_117.1.2.3 bus2=bus_052.1.2.3 LineCode=LC1 Length=0.4 units=kft
+New Line.Line_118_067 phases=3 bus1=bus_118.1.2.3 bus2=bus_067.1.2.3 LineCode=LC6 Length=0.35 units=kft
+New Line.Line_118_123 phases=3 bus1=bus_118.1.2.3 bus2=bus_123.1.2.3 LineCode=LC6 Length=0.35 units=kft
+
+! Normally closed switches represented as short Lines
+New Line.Line_013_117 phases=3 bus1=bus_013.1.2.3 bus2=bus_117.1.2.3 LineCode=LC1 Length=0.001 units=kft
+New Line.Line_018_115 phases=3 bus1=bus_018.1.2.3 bus2=bus_115.1.2.3 LineCode=LC1 Length=0.001 units=kft
+New Line.Line_060_118 phases=3 bus1=bus_060.1.2.3 bus2=bus_118.1.2.3 LineCode=LC1 Length=0.001 units=kft
+New Line.Line_097_119 phases=3 bus1=bus_097.1.2.3 bus2=bus_119.1.2.3 LineCode=LC1 Length=0.001 units=kft
+
+Set VoltageBases=[69,4.16]
+CalcVoltageBases

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "case123",
+  "description": "Rede de distribuição, 123 barras, 1 transformador",
+  "files": {
+    "demand": "demand.csv",
+    "prices": "price.csv",
+    "devices": "devices.json"
+  },
+  "base": {
+    "s_base_kva": 1000.0,
+    "v_base_kv": 4.16
+  },
+  "network": {
+    "master": "dss/Master.dss",
+    "slack_bus": "sourcebus"
+  },
+  "grid": {
+    "bus": "sourcebus",
+    "v_ref_pu": 1.0,
+    "p_import_max_kw": 2000.0,
+    "p_export_max_kw": 2000.0,
+    "q_max_kvar": 2000.0,
+    "feed_in_tariff_ratio": 1.0
+  },
+  "voltage_limits": {
+    "v_min_pu": 0.95,
+    "v_max_pu": 1.05
+  },
+  "defaults": {
+    "power_factor": 0.95
+  }
+}

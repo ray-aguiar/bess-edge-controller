@@ -1,0 +1,47 @@
+{
+  "bess": [
+    {
+      "id": "b1",
+      "bus": "bus_016",
+      "e_cap_kwh": 2000.0,
+      "p_charge_max_kw": 500.0,
+      "p_discharge_max_kw": 500.0,
+      "s_max_kva": 550.0,
+      "reactive_control": true,
+      "q_loss_rated_kw": 25.0,
+      "eta_charge": 0.95,
+      "eta_discharge": 0.95,
+      "soc_init_frac": 0.5,
+      "soc_min_frac": 0.10,
+      "soc_max_frac": 1.0,
+      "cyclic_soc": true
+    }
+  ],
+  "pv": [
+    {
+      "id": "pv1",
+      "bus": "bus_009",
+      "p_max_kw": 500.0,
+      "s_max_kva": 550.0,
+      "q_loss_rated_kw": 15.0,
+      "night_var": false,
+      "profile": "pv.csv:PV9",
+      "control": "optimal",
+      "curtailable": true,
+      "power_factor": 1.0
+    },
+    {
+      "id": "pv2",
+      "bus": "bus_027",
+      "p_max_kw": 750.0,
+      "s_max_kva": 825.0,
+      "q_loss_rated_kw": 22.5,
+      "night_var": false,
+      "profile": "pv.csv:PV27",
+      "control": "optimal",
+      "curtailable": true,
+      "power_factor": 1.0
+    }
+  ]
+}
+

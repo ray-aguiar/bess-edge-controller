@@ -54,12 +54,12 @@ if __name__ == "__main__":
         "device": "b1",
         "start_date": "2023-01-01",
         "end_date": "2023-02-28",
-        "architecture": "lstm",
+        "architecture": "mlp",
         "training": "supervised",
         "window": 96,
         "block_weeks": None,
         "eval_fraction": 0.2,
-        "extra_features": {"branches": ["p_flow_pu"]},
+        "extra_features": {},#{"branches": ["p_flow_pu"]},
     }
     hyperparameters = Hyperparameter(hidden_size=64, learning_rate=1e-3, batch_size=64, epochs=100)
     output = f"results/train/{config['training']}/{config['architecture']}/"

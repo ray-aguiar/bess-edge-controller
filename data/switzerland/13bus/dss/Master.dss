@@ -1,0 +1,43 @@
+Clear
+New Circuit.case13 phases=3 bus1=bus_001 basekV=0.22 pu=1 frequency=60
+
+/* 
+! Jeito feito na IC; levemente mais próximo ao LabREI real
+New WireData.Fios Rdc=0.52 Rac=0.63 Runits=km Radius=3.338 Radunits=mm
+
+New LineGeometry.Geometria Nconds=3 Nphases=3 Units=cm
+~ Cond=1 Wire=Fios X=-10 H=100
+~ Cond=2 Wire=Fios X=0 H=100
+~ Cond=3 Wire=Fios X=10 H=100
+~ Reduce=no
+
+New Line.Line_001_002 bus1=bus_001 bus2=bus_002 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_002_003 bus1=bus_002 bus2=bus_003 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_003_004 bus1=bus_003 bus2=bus_004 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_004_005 bus1=bus_004 bus2=bus_005 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_005_006 bus1=bus_005 bus2=bus_006 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_006_007 bus1=bus_006 bus2=bus_007 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_007_008 bus1=bus_007 bus2=bus_008 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_008_009 bus1=bus_008 bus2=bus_009 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_009_010 bus1=bus_009 bus2=bus_010 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_010_011 bus1=bus_010 bus2=bus_011 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_011_012 bus1=bus_011 bus2=bus_012 Length=25 Units=m Geometry=Geometria phases=3
+New Line.Line_012_013 bus1=bus_012 bus2=bus_013 Length=25 Units=m Geometry=Geometria phases=3
+*/
+
+! Com R1, X1, C1, R0, X0, C0
+New Line.line_001_002 phases=3 bus1=bus_001 bus2=bus_002 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_002_003 phases=3 bus1=bus_002 bus2=bus_003 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_003_004 phases=3 bus1=bus_003 bus2=bus_004 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_004_005 phases=3 bus1=bus_004 bus2=bus_005 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_005_006 phases=3 bus1=bus_005 bus2=bus_006 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_006_007 phases=3 bus1=bus_006 bus2=bus_007 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_007_008 phases=3 bus1=bus_007 bus2=bus_008 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_008_009 phases=3 bus1=bus_008 bus2=bus_009 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_009_010 phases=3 bus1=bus_009 bus2=bus_010 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_010_011 phases=3 bus1=bus_010 bus2=bus_011 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_011_012 phases=3 bus1=bus_011 bus2=bus_012 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+New Line.line_012_013 phases=3 bus1=bus_012 bus2=bus_013 Length=0.025 Units=km R1=0.52 X1=0.292609 R0=0.697533 X0=2.30423 C1=15.6066 C0=4.67362
+
+Set VoltageBases=[0.22]
+CalcVoltageBases

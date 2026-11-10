@@ -1,0 +1,49 @@
+Clear
+New Circuit.case34 phases=3 bus1=sourcebus basekV=69 pu=1 frequency=60
+
+! Transformer
+New Transformer.SubXF Phases=3 Windings=2 Xhl=4.0
+Edit Transformer.SubXF wdg=1 bus=sourcebus conn=delta kV=69 kVA=25000 %r=0.5
+Edit Transformer.SubXF wdg=2 bus=bus_001 conn=wye kV=24.9 kVA=25000 %r=0.5
+
+! LineCodes
+New LineCode.LC300 nphases=3 Rmatrix=[0.6013 | 0.0940 0.5961 | 0.0940 0.0940 0.5961] Xmatrix=[0.9440 | 0.2340 0.9280 | 0.2340 0.2340 0.9280] units=mi
+New LineCode.LC301 nphases=3 Rmatrix=[0.2900 | 0.0920 0.2900 | 0.0920 0.0920 0.2900] Xmatrix=[0.8000 | 0.3000 0.7600 | 0.3000 0.3000 0.7600] units=mi 
+
+! Lines
+New Line.Line_001_002 bus1=bus_001 bus2=bus_002 Length=2.58 Units=kft LineCode=LC300 phases=3
+New Line.Line_002_003 bus1=bus_002 bus2=bus_003 Length=1.73 Units=kft LineCode=LC300 phases=3
+New Line.Line_003_004 bus1=bus_003 bus2=bus_004 Length=32.23 Units=kft LineCode=LC300 phases=3
+New Line.Line_004_005 bus1=bus_004 bus2=bus_005 Length=5.804 Units=kft LineCode=LC300 phases=3
+New Line.Line_004_006 bus1=bus_004 bus2=bus_006 Length=37.5 Units=kft LineCode=LC300 phases=3
+New Line.Line_006_007 bus1=bus_006 bus2=bus_007 Length=29.73 Units=kft LineCode=LC300 phases=3
+New Line.Line_007_025 bus1=bus_007 bus2=bus_025 Length=0.01 Units=kft LineCode=LC300 phases=3
+New Line.Line_025_008 bus1=bus_025 bus2=bus_008 Length=0.31 Units=kft LineCode=LC300 phases=3
+New Line.Line_008_009 bus1=bus_008 bus2=bus_009 Length=1.71 Units=kft LineCode=LC300 phases=3
+New Line.Line_008_012 bus1=bus_008 bus2=bus_012 Length=10.21 Units=kft LineCode=LC300 phases=3
+New Line.Line_009_010 bus1=bus_009 bus2=bus_010 Length=48.15 Units=kft LineCode=LC300 phases=3
+New Line.Line_010_011 bus1=bus_010 bus2=bus_011 Length=13.74 Units=kft LineCode=LC300 phases=3
+New Line.Line_012_013 bus1=bus_012 bus2=bus_013 Length=3.03 Units=kft LineCode=LC300 phases=3
+New Line.Line_012_014 bus1=bus_012 bus2=bus_014 Length=0.84 Units=kft LineCode=LC300 phases=3
+New Line.Line_014_015 bus1=bus_014 bus2=bus_015 Length=20.44 Units=kft LineCode=LC300 phases=3
+New Line.Line_015_027 bus1=bus_015 bus2=bus_027 Length=0.52 Units=kft LineCode=LC300 phases=3
+New Line.Line_027_028 bus1=bus_027 bus2=bus_028 Length=23.33 Units=kft LineCode=LC300 phases=3
+New Line.Line_027_026 bus1=bus_027 bus2=bus_026 Length=36.83 Units=kft LineCode=LC300 phases=3
+New Line.Line_026_016 bus1=bus_026 bus2=bus_016 Length=0.01 Units=kft LineCode=LC300 phases=3
+New Line.Line_016_029 bus1=bus_016 bus2=bus_029 Length=4.90 Units=kft LineCode=LC300 phases=3
+New Line.Line_029_032 bus1=bus_029 bus2=bus_032 Length=1.62 Units=kft LineCode=LC300 phases=3
+New Line.Line_029_017 bus1=bus_029 bus2=bus_017 Length=5.83 Units=kft LineCode=LC300 phases=3
+New Line.Line_017_021 bus1=bus_017 bus2=bus_021 Length=0.28 Units=kft LineCode=LC300 phases=3
+New Line.Line_017_030 bus1=bus_017 bus2=bus_030 Length=2.02 Units=kft LineCode=LC300 phases=3
+New Line.Line_030_018 bus1=bus_030 bus2=bus_018 Length=2.68 Units=kft LineCode=LC300 phases=3
+New Line.Line_018_020 bus1=bus_018 bus2=bus_020 Length=0.86 Units=kft LineCode=LC300 phases=3
+New Line.Line_018_031 bus1=bus_018 bus2=bus_031 Length=0.28 Units=kft LineCode=LC300 phases=3
+New Line.Line_031_019 bus1=bus_031 bus2=bus_019 Length=4.86 Units=kft LineCode=LC300 phases=3
+New Line.Line_021_022 bus1=bus_021 bus2=bus_022 Length=1.35 Units=kft LineCode=LC300 phases=3
+New Line.Line_022_023 bus1=bus_022 bus2=bus_023 Length=3.64 Units=kft LineCode=LC300 phases=3
+New Line.Line_023_024 bus1=bus_023 bus2=bus_024 Length=0.53 Units=kft LineCode=LC300 phases=3
+New Line.Line_016_033 bus1=bus_016 bus2=bus_033 Length=1.00 Units=kft LineCode=LC301 phases=3
+New Line.Line_033_034 bus1=bus_033 bus2=bus_034 Length=10.56 Units=kft LineCode=LC301 phases=3
+
+Set VoltageBases=[69,24.9]
+CalcVoltageBases
