@@ -57,11 +57,11 @@ def rollout(steps=STEPS, horizon=HORIZON, case=None, *, model=None, config=None,
                        for key, values in observation["pv"].items()},
             }
         if model is not None:
-            state = local_observation(observation, bus, config["device"])
+            state = local_observation(observation, bus, config["device"], config.get("extra_features"))
             history.append(state)
             window = [history[0]] * (history.maxlen - len(history)) + list(history)
             with torch.inference_mode():
-                predicted = model(encode(window).unsqueeze(0)).reshape(-1)
+                predicted = model(encode(window, config.get("features")).unsqueeze(0)).reshape(-1)
             if predicted.numel() != 2:
                 raise ValueError("The NN must return two pu outputs: active and reactive BESS power")
             action["bess"][config["device"]] = dict(zip(TARGETS, predicted.tolist()))
