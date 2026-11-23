@@ -4,7 +4,7 @@
   "name": "case5",
   "description": "Feeder radial de distribuicao, 5 barras, 1 BESS e 1 PV",
   "files": {
-    "demand": "demand.csv",
+    "demand": "balanced_demand.csv",
     "prices": "../prices/standard_prices.csv",
     "devices": "devices.json"
   },
