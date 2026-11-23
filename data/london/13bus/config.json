@@ -4,7 +4,7 @@
   "name": "case13",
   "description": "Laboratório de Redes Elétricas Inteligentes, 13 barras, 1 BESS e 1 PV",
   "files": {
-    "demand": "demand.csv",
+    "demand": "demand_case13.csv",
     "prices": "price.csv",
     "devices": "devices.json"
   },
