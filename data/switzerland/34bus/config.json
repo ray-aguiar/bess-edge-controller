@@ -4,7 +4,7 @@
   "name": "case34",
   "description": "Rede de distribuição, 35 barras, 1 transformador",
   "files": {
-    "demand": "demand.csv",
+    "demand": "balanced_demand.csv",
     "prices": "../prices/standard_prices.csv",
     "devices": "devices.json"
   },
