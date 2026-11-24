@@ -14,7 +14,7 @@ from opf_teacher.opf.single_phase import load_case
 from tools.dataset import configure_pv, select_period
 from tools.features import TARGETS, encode, feature_order
 
-CASE_PATH = Path(__file__).resolve().parent / "data" / "5bus-switzerland"
+CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" # "5bus-switzerland" # "switzerland" / "5bus"
 
 
 def main(config, output="results/train", seed=0):
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         "architecture": "mlp",
         "training": "supervised",
         "window": 96,
-        "block_weeks": None,
+        "block_weeks": 1,
         "eval_fraction": 0.2,
         "extra_features": {},#{"branches": ["p_flow_pu"]},
     }
