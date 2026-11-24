@@ -20,6 +20,14 @@ OUTPUT_DIR = INPUT_DIR / "plots"
 
 COLORS = ["dodgerblue", "gold", "hotpink", "blueviolet", "seagreen", "darkorange", "deeppink"]
 
+def aggregate_buses(buses, suffix):
+    columns = [c for c in buses.columns if c.startswith("bus_") and c.endswith(suffix)]
+    if not columns:
+        raise ValueError(f"Nenhuma coluna encontrada para o sufixo {suffix}.")
+    result = buses[["timestamp"]].copy()
+    result["total"] = buses[columns].sum(axis=1)
+    return result.groupby("timestamp", as_index=False)["total"].sum().sort_values("timestamp")
+
 def load_data():
     data = {name: pd.read_csv(INPUT_DIR / f"{name}.csv") for name in ("bess", "buses", "grid", "pv")}
     for name, df in data.items():
@@ -99,9 +107,12 @@ def plot_cost(grid, dt, daily=False):
 def aggregate(df, column):
     return df.groupby("timestamp", as_index=False)[column].sum().sort_values("timestamp")
 
-def plot_power_flow(pv, grid, bess, dt):
+def plot_power_flow(pv, grid, bess, buses, dt):
     fig, ax = setup_figure("Active power flow", "Power [kW]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
+
+    load = aggregate_buses(buses, "_p_injection_kw")
+    plot_step(ax, elapsed_hours(load, daily=True), load["total"], dt, color="black", label="Load")
 
     for df, column, color, label in (
         (pv, "generation_kw", "gold", "PV generation"),
@@ -116,9 +127,12 @@ def plot_power_flow(pv, grid, bess, dt):
 
     save_figure(fig, ax, "daily_power_flow.png")
 
-def plot_reactive_power(pv, grid, bess, dt):
+def plot_reactive_power(pv, grid, bess, buses, dt):
     fig, ax = setup_figure("Reactive power flow", "Reactive power [kvar]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
+
+    load = aggregate_buses(buses, "_q_injection_kvar")
+    plot_step(ax, elapsed_hours(load, daily=True), load["total"], dt, color="black", label="Load")
 
     for df, column, color, label in (
         (pv, "q_injection_kvar", "gold", "PV"),
@@ -149,8 +163,8 @@ def main():
     plot_soc(daily["bess"], dt, daily=True)
     plot_voltages(daily["buses"], dt, daily=True)
     plot_cost(daily["grid"], dt, daily=True)
-    plot_power_flow(daily["pv"], daily["grid"], daily["bess"], dt)
-    plot_reactive_power(daily["pv"], daily["grid"], daily["bess"], dt)
+    plot_power_flow(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt)
+    plot_reactive_power(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt)
 
     print(f"Plots saved in: {OUTPUT_DIR}")
 
