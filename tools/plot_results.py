@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 
 # Parameters
-TRAINING = "supervised"
-ARCHITECTURE = "mlp"
+TRAINING = "supervised" # "supervised", "other"
+ARCHITECTURE = "mlp" # "mlp" , "lstm", "no_bess"
 SEED = 42
 TRIAL = 0
 DAY = "2024-01-03"
@@ -23,7 +23,7 @@ COLORS = ["dodgerblue", "gold", "hotpink", "blueviolet", "seagreen", "darkorange
 def aggregate_buses(buses, suffix):
     columns = [c for c in buses.columns if c.startswith("bus_") and c.endswith(suffix)]
     if not columns:
-        raise ValueError(f"Nenhuma coluna encontrada para o sufixo {suffix}.")
+        raise ValueError(f"No column found for the suffix {suffix}.")
     result = buses[["timestamp"]].copy()
     result["total"] = buses[columns].sum(axis=1)
     return result.groupby("timestamp", as_index=False)["total"].sum().sort_values("timestamp")
@@ -38,7 +38,7 @@ def load_data():
 def get_interval(grid):
     intervals = grid["timestamp"].drop_duplicates().sort_values().diff().dropna().dt.total_seconds()
     if intervals.empty:
-        raise ValueError("Não foi possível determinar o intervalo de simulação.")
+        raise ValueError("It wasn't possible to determine the simulation interval.")
     return intervals.median() / 3600
 
 def select_day(df):
@@ -111,15 +111,23 @@ def plot_power_flow(pv, grid, bess, buses, dt):
     fig, ax = setup_figure("Active power flow", "Power [kW]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
 
-    load = aggregate_buses(buses, "_p_injection_kw")
-    plot_step(ax, elapsed_hours(load, daily=True), load["total"], dt, color="black", label="Load")
-
+    grid = grid.copy()
+    grid["p_net_grid_kw"] = grid["p_import_kw"] - grid["p_export_kw"]
     for df, column, color, label in (
         (pv, "generation_kw", "gold", "PV generation"),
-        (grid, "p_import_kw", "hotpink", "Grid import"),
+        (grid, "p_net_grid_kw", "hotpink", "Grid"),
     ):
         df = aggregate(df, column)
         plot_step(ax, elapsed_hours(df, daily=True), df[column], dt, color=color, label=label)
+
+    '''load = buses[["timestamp", "bus_001_p_injection_kw"]].copy()
+    load["bus_001_p_injection_kw"] = pd.to_numeric(load["bus_001_p_injection_kw"])
+    load = load.sort_values("timestamp")
+
+    plot_step(ax, elapsed_hours(load, daily=True), load["bus_001_p_injection_kw"],
+            dt, color="black", label="Load")'''
+    #load = aggregate_buses(buses, "_p_injection_kw")
+    #plot_step(ax, elapsed_hours(load, daily=True), load["total"], dt, color="black", label="Load")
 
     bess = aggregate(bess, "p_net_kw")
     hours = elapsed_hours(bess, daily=True)
@@ -131,9 +139,9 @@ def plot_reactive_power(pv, grid, bess, buses, dt):
     fig, ax = setup_figure("Reactive power flow", "Reactive power [kvar]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
 
-    load = aggregate_buses(buses, "_q_injection_kvar")
+    '''load = aggregate_buses(buses, "_q_injection_kvar")
     plot_step(ax, elapsed_hours(load, daily=True), load["total"], dt, color="black", label="Load")
-
+'''
     for df, column, color, label in (
         (pv, "q_injection_kvar", "gold", "PV"),
         (grid, "q_injection_kvar", "hotpink", "Grid"),
@@ -158,7 +166,7 @@ def main():
 
     daily = {name: select_day(df) for name, df in data.items()}
     if any(df.empty for df in daily.values()):
-        raise ValueError(f"Não foram encontrados dados para o dia {DAY}.")
+        raise ValueError(f"Data wasn't found for date {DAY}.")
 
     plot_soc(daily["bess"], dt, daily=True)
     plot_voltages(daily["buses"], dt, daily=True)

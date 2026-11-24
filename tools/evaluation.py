@@ -22,8 +22,11 @@ class PolicyEvaluator:
         self.env = MicrogridEnv(EnvironmentConfig(case.config_path, episode_steps=period["steps"],
                                                 start_step=period["start_step"]))
 
-    def evaluate(self, model, record=False):
-        model.eval()
+    def evaluate(self, model=None, record=False, disable_bess=False):
+        if not disable_bess:
+            if model is None:
+                raise ValueError("A model is required when BESS control is enabled.")
+            model.eval()
         history = deque(maxlen=self.config["window"])
         observation, _ = self.env.reset(seed=self.seed)
         initial_soc = observation["bess"][self.device]["soc_before_frac"]
@@ -32,10 +35,13 @@ class PolicyEvaluator:
             state = local_observation(observation, self.bus, self.device, self.config.get("extra_features"))
             history.append(state)
             window = [history[0]] * (history.maxlen - len(history)) + list(history)
-            with torch.inference_mode():
-                predicted = model(encode(window, self.config.get("features")).unsqueeze(0)).reshape(-1)
-            if predicted.numel() != len(TARGETS):
-                raise ValueError("The model must return active and reactive BESS power")
+            if disable_bess:
+                predicted = torch.zeros(len(TARGETS))
+            else:
+                with torch.inference_mode():
+                    predicted = model(encode(window, self.config.get("features")).unsqueeze(0)).reshape(-1)
+                if predicted.numel() != len(TARGETS):
+                    raise ValueError("The model must return active and reactive BESS power")
             action = {
                 "bess": {key: {"p_net_pu": 0.0, "q_injection_pu": 0.0} for key in observation["bess"]} |
                         {self.device: dict(zip(TARGETS, predicted.tolist()))},
