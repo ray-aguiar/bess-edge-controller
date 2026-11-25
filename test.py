@@ -9,9 +9,10 @@ from learning.networks.mlp import MLP
 from learning.networks.lstm import LSTM
 from tools.evaluation import PolicyEvaluator
 from tools.export_results import save_timeseries
+from tools.plot_results import create_plots
 
 
-CASE_PATH = Path(__file__).resolve().parent / "data" / "5bus-switzerland"
+CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" #"5bus-switzerland"
 
 
 def main(model_path, config, output="results/test", seed=0):
@@ -60,3 +61,4 @@ if __name__ == "__main__":
     seed = 42
     records, summary = main(model_folder / "best.pt", config,
                             output=Path("results/test") / model_folder.relative_to("results/train"), seed=seed)
+    plots = create_plots(output_dir=Path("results/test") / model_folder.relative_to("results/train") / "plots")

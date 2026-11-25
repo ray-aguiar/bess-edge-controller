@@ -7,9 +7,10 @@ import torch
 
 from tools.evaluation import PolicyEvaluator
 from tools.export_results import save_timeseries
+from tools.plot_results import create_plots
 
 
-CASE_PATH = Path(__file__).resolve().parent / "data" / "5bus-switzerland"
+CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" #"5bus-switzerland"
 
 def main(config, model_folder, output="results/test/no_bess", seed=0):
     random.seed(seed)
@@ -55,3 +56,4 @@ if __name__ == "__main__":
     model_folder = Path("results/train/supervised/mlp/seed_42/trial_0")
 
     records, summary = main(config, model_folder=model_folder, output="results/test/other/no_bess/seed_42/trial_0", seed=42)
+    plots = create_plots(output_dir=Path("results/test/other/no_bess/seed_42/trial_0/plots"))

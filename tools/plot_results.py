@@ -16,7 +16,6 @@ DAY = "2024-01-03"
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUT_DIR = ROOT / "results" / "test" / TRAINING / ARCHITECTURE / f"seed_{SEED}" / f"trial_{TRIAL}"
-OUTPUT_DIR = INPUT_DIR / "plots"
 
 COLORS = ["dodgerblue", "gold", "hotpink", "blueviolet", "seagreen", "darkorange", "deeppink"]
 
@@ -65,15 +64,15 @@ def setup_figure(title, ylabel, daily=False):
     ax.set_axisbelow(True)
     return fig, ax
 
-def save_figure(fig, ax, filename):
+def save_figure(fig, ax, filename, output_dir):
     handles, labels = ax.get_legend_handles_labels()
     if handles:
         ax.legend(loc="best")
     fig.tight_layout()
-    fig.savefig(OUTPUT_DIR / filename, dpi=150)
+    fig.savefig(output_dir / filename, dpi=150)
     plt.close(fig)
 
-def plot_soc(bess, dt, daily=False):
+def plot_soc(bess, dt, daily=False, output_dir=None):
     fig, ax = setup_figure("Battery state of charge", "State of charge", daily)
     groups = bess.groupby("device") if "device" in bess.columns else [("BESS", bess)]
 
@@ -85,9 +84,9 @@ def plot_soc(bess, dt, daily=False):
     ax.axhline(0.9, color="black", linestyle="--", label="Upper limit")
     ax.axhline(0.1, color="black", linestyle=":", label="Lower limit")
     ax.set_ylim(0, 1)
-    save_figure(fig, ax, "daily_soc.png" if daily else "full_soc.png")
+    save_figure(fig, ax, "daily_soc.png" if daily else "full_soc.png", output_dir)
 
-def plot_voltages(buses, dt, daily=False):
+def plot_voltages(buses, dt, daily=False, output_dir=None):
     fig, ax = setup_figure("Bus voltage magnitude", "Voltage [pu]", daily)
     columns = sorted(c for c in buses.columns if c.startswith("bus_") and c.endswith("_v_pu"))
 
@@ -96,18 +95,18 @@ def plot_voltages(buses, dt, daily=False):
         plot_step(ax, elapsed_hours(df, daily), df[column], dt,
                   color=COLORS[i % len(COLORS)], linewidth=1, label=column.replace("_v_pu", ""))
 
-    save_figure(fig, ax, "daily_voltages.png" if daily else "full_voltages.png")
+    save_figure(fig, ax, "daily_voltages.png" if daily else "full_voltages.png", output_dir)
 
-def plot_cost(grid, dt, daily=False):
+def plot_cost(grid, dt, daily=False, output_dir=None):
     fig, ax = setup_figure("Energy cost per interval", "Cost [CHF]", daily)
     df = grid.sort_values("timestamp")
     plot_step(ax, elapsed_hours(df, daily), df["cost_chf"], dt, color="hotpink", label="Cost")
-    save_figure(fig, ax, "daily_cost.png" if daily else "full_cost.png")
+    save_figure(fig, ax, "daily_cost.png" if daily else "full_cost.png", output_dir)
 
 def aggregate(df, column):
     return df.groupby("timestamp", as_index=False)[column].sum().sort_values("timestamp")
 
-def plot_power_flow(pv, grid, bess, buses, dt):
+def plot_power_flow(pv, grid, bess, buses, dt, output_dir=None):
     fig, ax = setup_figure("Active power flow", "Power [kW]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
 
@@ -133,9 +132,9 @@ def plot_power_flow(pv, grid, bess, buses, dt):
     hours = elapsed_hours(bess, daily=True)
     ax.bar(hours, bess["p_net_kw"], width=0.9 * dt, align="edge", color="blueviolet", label="BESS")
 
-    save_figure(fig, ax, "daily_power_flow.png")
+    save_figure(fig, ax, "daily_power_flow.png", output_dir)
 
-def plot_reactive_power(pv, grid, bess, buses, dt):
+def plot_reactive_power(pv, grid, bess, buses, dt, output_dir=None):
     fig, ax = setup_figure("Reactive power flow", "Reactive power [kvar]", daily=True)
     ax.axhline(0, color="black", linestyle="-.")
 
@@ -153,28 +152,25 @@ def plot_reactive_power(pv, grid, bess, buses, dt):
     hours = elapsed_hours(bess, daily=True)
     ax.bar(hours, bess["q_injection_kvar"], width=0.9 * dt, align="edge", color="blueviolet", label="BESS")
 
-    save_figure(fig, ax, "daily_reactive_power.png")
+    save_figure(fig, ax, "daily_reactive_power.png", output_dir)
 
-def main():
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def create_plots(output_dir):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     data = load_data()
     dt = get_interval(data["grid"])
 
-    plot_soc(data["bess"], dt)
-    plot_voltages(data["buses"], dt)
-    plot_cost(data["grid"], dt)
+    plot_soc(data["bess"], dt, output_dir=output_dir)
+    plot_voltages(data["buses"], dt, output_dir=output_dir)
+    plot_cost(data["grid"], dt, output_dir=output_dir)
 
     daily = {name: select_day(df) for name, df in data.items()}
     if any(df.empty for df in daily.values()):
         raise ValueError(f"Data wasn't found for date {DAY}.")
 
-    plot_soc(daily["bess"], dt, daily=True)
-    plot_voltages(daily["buses"], dt, daily=True)
-    plot_cost(daily["grid"], dt, daily=True)
-    plot_power_flow(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt)
-    plot_reactive_power(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt)
-
-    print(f"Plots saved in: {OUTPUT_DIR}")
-
-if __name__ == "__main__":
-    main()
+    plot_soc(daily["bess"], dt, daily=True, output_dir=output_dir)
+    plot_voltages(daily["buses"], dt, daily=True, output_dir=output_dir)
+    plot_cost(daily["grid"], dt, daily=True, output_dir=output_dir)
+    plot_power_flow(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt, output_dir=output_dir)
+    plot_reactive_power(daily["pv"], daily["grid"], daily["bess"], daily["buses"], dt, output_dir=output_dir)
