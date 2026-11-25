@@ -52,6 +52,8 @@ if __name__ == "__main__":
     architecture = "mlp"
     training = "supervised"
     label = None
+    day = "2024-01-03"
+
     model_folder = Path(f"results/train/{training}/{architecture}")
     if label:
         model_folder /= label
@@ -59,6 +61,8 @@ if __name__ == "__main__":
     config = {"case": str(CASE_PATH), "architecture": architecture, "training": training,
               "start_date": "2024-01-01", "end_date": "2024-01-10"}
     seed = 42
+    output_dir = Path("results/test") / model_folder.relative_to("results/train")
+
     records, summary = main(model_folder / "best.pt", config,
-                            output=Path("results/test") / model_folder.relative_to("results/train"), seed=seed)
-    plots = create_plots(output_dir=Path("results/test") / model_folder.relative_to("results/train") / "plots")
+                            output=output_dir, seed=seed)
+    create_plots(input_dir=output_dir, day=day)

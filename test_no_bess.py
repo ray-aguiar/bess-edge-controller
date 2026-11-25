@@ -45,6 +45,8 @@ def main(config, model_folder, output="results/test/no_bess", seed=0):
 
 
 if __name__ == "__main__":
+
+    day = "2024-01-03"
     config = {
         "case": str(CASE_PATH),
         "architecture": "mlp",
@@ -54,6 +56,7 @@ if __name__ == "__main__":
     }
 
     model_folder = Path("results/train/supervised/mlp/seed_42/trial_0")
+    output_dir = Path("results/test/other/no_bess/seed_42/trial_0")
 
     records, summary = main(config, model_folder=model_folder, output="results/test/other/no_bess/seed_42/trial_0", seed=42)
-    plots = create_plots(output_dir=Path("results/test/other/no_bess/seed_42/trial_0/plots"))
+    create_plots(input_dir=output_dir, day=day)
