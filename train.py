@@ -54,7 +54,7 @@ if __name__ == "__main__":
         "device": "b1",
         "start_date": "2023-01-01",
         "end_date": "2023-12-31",
-        "architecture": "mlp",
+        "architecture": "lstm",
         "training": "supervised",
         "window": 96,
         "block_weeks": 1,

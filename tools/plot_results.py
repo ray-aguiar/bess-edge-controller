@@ -108,6 +108,20 @@ def plot_soc(bess, dt, soc_limits, daily=False, output_dir=None):
     ax.set_ylim(0, 1)
     save_figure(fig, ax, "daily_soc.png" if daily else "full_soc.png", output_dir)
 
+def plot_bess_power(bess, dt, daily=False, output_dir=None):
+    fig, ax = setup_figure("BESS active power", "Power [kW]", daily)
+    ax.axhline(0, color="black", linestyle="-.")
+
+    df = aggregate(bess, "p_requested_kw")
+    plot_step(ax, elapsed_hours(df, daily), df["p_requested_kw"], dt,
+              color="blueviolet", label="Requested power")
+
+    df = aggregate(bess, "p_net_kw")
+    plot_step(ax, elapsed_hours(df, daily), df["p_net_kw"], dt,
+              color="hotpink", label="Net power")
+
+    filename = "daily_bess_power.png" if daily else "full_bess_power.png"
+    save_figure(fig, ax, filename, output_dir)
 
 def plot_voltages(buses, dt, daily=False, output_dir=None):
     fig, ax = setup_figure("Bus voltage magnitude", "Voltage [pu]", daily)
@@ -196,6 +210,7 @@ def create_plots(input_dir, day, output_dir=None):
     plot_soc(data["bess"], dt, soc_limits, output_dir=output_dir)
     plot_voltages(data["buses"], dt, output_dir=output_dir)
     plot_cost(data["grid"], dt, output_dir=output_dir)
+    plot_bess_power(data["bess"], dt, output_dir=output_dir)
 
     # Daily plots
     daily = {name: select_day(df, day) for name, df in data.items()}
@@ -204,6 +219,7 @@ def create_plots(input_dir, day, output_dir=None):
         raise ValueError(f"Data wasn't found for date {day}.")
 
     plot_soc(daily["bess"], dt, soc_limits, daily=True, output_dir=output_dir)
+    plot_bess_power(daily["bess"], dt, daily = True, output_dir=output_dir)
     plot_voltages(daily["buses"], dt, daily=True, output_dir=output_dir)
     plot_cost(daily["grid"], dt, daily=True, output_dir=output_dir)
     plot_power_flow(daily["pv"], daily["grid"], daily["bess"],
