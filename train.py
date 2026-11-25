@@ -1,3 +1,4 @@
+"""Generate or reuse teacher data, then train a policy."""
 import json
 import random
 from pathlib import Path
@@ -6,76 +7,89 @@ import numpy as np
 import torch
 from torch.utils.data import random_split
 
+from generate_dataset import dataset_directory, generate_dataset
 from learning.algorithms.behavior_cloning import BehaviorCloning, Hyperparameter
 from learning.networks.lstm import LSTM
 from learning.networks.mlp import MLP
-from opf_teacher import PairConfig, collect_pairs
-from opf_teacher.opf.single_phase import load_case
-from tools.dataset import configure_pv, select_period
-from tools.features import TARGETS, encode, feature_order
 
-CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" # "5bus-switzerland" # "switzerland" / "5bus"
+ROOT = Path(__file__).resolve().parent
+DATASET_CONFIG = {
+    "case": str(ROOT / "data" / "switzerland" / "5bus"),
+    "device": "b1",
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "window": 96,
+    "block_weeks": 1,
+    "extra_features": {}#{"time": ["hour_sin", "hour_cos", "month_sin", "month_cos"], "grid": ["buy_price_01"]},  # Use {} for no extra features.
+}
 
+ARCHITECTURE = "mlp"  # "mlp" or "lstm"
+TRAINING = "supervised"
+EVAL_FRACTION = 0.2
+HYPERPARAMETERS = Hyperparameter(hidden_size=64, learning_rate=1e-3, batch_size=64, epochs=100)
+SEED = 42
+MAX_ITERATIONS = 1
 
-def main(config, output="results/train", seed=0):
+def _dataset_path():
+    path = dataset_directory(DATASET_CONFIG)
+    if not all((path / name).is_file() for name in ("x.pt", "y.pt", "config.json")):
+        print(f"Dataset not found at {path}; generating it now.")
+        generate_dataset(DATASET_CONFIG, path)
+    else:
+        print(f"Using existing dataset: {path}")
+    return path
+
+def load_dataset(dataset_dir):
+    """Load tensors and input/target metadata produced by generate_dataset.py."""
+    dataset_dir = Path(dataset_dir)
+    if not dataset_dir.is_dir():
+        raise FileNotFoundError(f"Dataset directory not found: {dataset_dir}")
+    metadata = json.loads((dataset_dir / "config.json").read_text(encoding="utf-8"))
+    features = metadata["features"]
+    targets = metadata["targets"]
+    if metadata["config"].get("features") != features:
+        raise ValueError("Dataset feature metadata is inconsistent")
+
+    x = torch.load(dataset_dir / "x.pt", map_location="cpu", weights_only=True)
+    y = torch.load(dataset_dir / "y.pt", map_location="cpu", weights_only=True)
+    if x.ndim != 3 or y.ndim != 2 or x.shape[0] != y.shape[0]:
+        raise ValueError("Expected X [samples, window, features] and Y [samples, targets]")
+    if x.shape[-1] != len(features) or y.shape[-1] != len(targets):
+        raise ValueError("Dataset tensor dimensions do not match its feature/target metadata")
+    return x, y, metadata
+
+def main(dataset_dir=None, architecture=ARCHITECTURE, eval_fraction=EVAL_FRACTION,
+         hyperparameters=None, seed=SEED, max_iterations=MAX_ITERATIONS,
+         output_root=ROOT / "results" / "train"):
+    if architecture not in {"mlp", "lstm"}:
+        raise ValueError("architecture must be 'mlp' or 'lstm'")
+    if not 0.0 < eval_fraction < 1.0:
+        raise ValueError("eval_fraction must be between 0 and 1")
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be positive")
+
+    dataset_dir = _dataset_path() if dataset_dir is None else Path(dataset_dir)
+    x, y, metadata = load_dataset(dataset_dir)
+    config = metadata["config"] | {"architecture": architecture, "training": TRAINING,
+                                   "eval_fraction": eval_fraction, "dataset_path": str(dataset_dir)}
+
     random.seed(seed)
     np.random.seed(seed % (2**32))
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True)
-    case, period = select_period(load_case(config["case"]), config, default_steps=None)
-    config |= period | {"voltage_source": "pre_action", "pad_initial": True,
-                        "label": "extra_features" if config.get("extra_features") else None}
-    pairs = PairConfig(formulation="single_phase_socp", mode="local", device_id=config["device"],
-                       window=config["window"], block_weeks=config.get("block_weeks"), pad_initial=config["pad_initial"],
-                       extra_features=config.setdefault("extra_features", {}))
-    config["teacher_mode"] = "single_optimization" if pairs.block_weeks is None else "weekly_blocks"
-    x, y = collect_pairs(configure_pv(case, "fixed"), pairs)
-    config["features"] = feature_order(x[0][-1])
-
-    output = Path(output)
-    output.mkdir(parents=True, exist_ok=True)
-    metadata = {"config": config, "seed": seed, "features": config["features"], "targets": TARGETS,
-                "state_source": "teacher", "voltage_source": config["voltage_source"], "pv_policy": "fixed"}
-    for name, data in (("x", x), ("y", y), ("config", metadata)):
-        (output / f"{name}.json").write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
-
-    x = torch.stack([encode(window, config["features"]) for window in x])
-    y = torch.tensor([[action[name] for name in TARGETS] for action in y], dtype=torch.float32)
-    torch.save(x, output / "x.pt")
-    torch.save(y, output / "y.pt")
-    print("X:", tuple(x.shape), "Y:", tuple(y.shape))
-    return x, y
-
-
-if __name__ == "__main__":
-    # mlp, lstm
-    config = {
-        "case": str(CASE_PATH),
-        "device": "b1",
-        "start_date": "2023-01-01",
-        "end_date": "2023-12-31",
-        "architecture": "lstm",
-        "training": "supervised",
-        "window": 96,
-        "block_weeks": 1,
-        "eval_fraction": 0.2,
-        "extra_features": {"time": ["hour_sin", "month_sin", "hour_cos", "month_cos"]},  # e.g. {"time": ["hour_sin", "month_sin"]}
-    }
-    hyperparameters = Hyperparameter(hidden_size=64, learning_rate=1e-3, batch_size=64, epochs=100)
-    output = f"results/train/{config['training']}/{config['architecture']}/"
-    if config["extra_features"]:
-        output = Path(output) / "extra_features"
-    seed = 42
-    max_iterations = 1
-
-    output = Path(output) / f"seed_{seed}"
-    x, y = main(config, output=output, seed=seed)
-    train_split, eval_split = random_split(range(len(x)), [1 - config["eval_fraction"], config["eval_fraction"]],
-                                         generator=torch.Generator().manual_seed(seed))
+    train_split, eval_split = random_split(range(len(x)), [1 - eval_fraction, eval_fraction],
+                                          generator=torch.Generator().manual_seed(seed))
     x_train, y_train = x[train_split.indices], y[train_split.indices]
     x_eval, y_eval = x[eval_split.indices], y[eval_split.indices]
-    network = {"mlp": MLP, "lstm": LSTM}[config["architecture"]]
-    trainer = BehaviorCloning(hyperparameters, network=network)
-    for iteration in range(max_iterations):
-        model = trainer.train(x_train, y_train, x_eval, y_eval, config,
-                              output=output / f"trial_{iteration}", seed=seed)
+
+    trainer = BehaviorCloning(hyperparameters or HYPERPARAMETERS, network={"mlp": MLP, "lstm": LSTM}[architecture])
+    output_dir = Path(output_root) / TRAINING / architecture
+    if config.get("label"):
+        output_dir /= config["label"]
+    output_dir /= f"seed_{seed}"
+
+    return [trainer.train(x_train, y_train, x_eval, y_eval, config, output_dir / f"trial_{i}", seed)
+            for i in range(max_iterations)]
+
+if __name__ == "__main__":
+    main()

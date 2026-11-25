@@ -9,22 +9,19 @@ from tools.evaluation import PolicyEvaluator
 from tools.export_results import save_timeseries
 from tools.plot_results import create_plots
 
-
 CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" #"5bus-switzerland"
+DEVICE = "b1"
+START_DATE = "2024-01-01"
+END_DATE = "2024-01-10"
+DAY = "2024-01-03"  # Day used for daily plots.
+SEED = 42
+OUTPUT_DIR = Path("results/test/other/no_bess") / f"seed_{SEED}"
 
-def main(config, model_folder, output="results/test/no_bess", seed=0):
+def main(config, output=OUTPUT_DIR, seed=SEED):
     random.seed(seed)
     np.random.seed(seed % (2**32))
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(True)
-
-    training = json.loads((Path(model_folder) / "training.json").read_text(encoding="utf-8"))
-
-    config = config | {key: training["config"][key] for key in ("device", "window")} | {
-        "extra_features": training["config"].get("extra_features", {}),
-        "features": training["config"].get("features"),
-        "label": training["config"].get("label"),
-    }
 
     evaluator = PolicyEvaluator(config, seed=seed)
     records, summary = evaluator.evaluate(model=None, record=True, disable_bess=True)
@@ -45,18 +42,7 @@ def main(config, model_folder, output="results/test/no_bess", seed=0):
 
 
 if __name__ == "__main__":
-
-    day = "2024-01-03" # Day data used for daily plots
-    config = {
-        "case": str(CASE_PATH),
-        "architecture": "mlp",
-        "training": "supervised",
-        "start_date": "2024-01-01",
-        "end_date": "2024-01-10",
-    }
-
-    model_folder = Path("results/train/supervised/mlp/seed_42/trial_0")
-    output_dir = Path("results/test/other/no_bess/seed_42/trial_0")
-
-    records, summary = main(config, model_folder=model_folder, output="results/test/other/no_bess/seed_42/trial_0", seed=42)
-    create_plots(input_dir=output_dir, day=day)
+    config = {"case": str(CASE_PATH), "device": DEVICE, "window": 1,
+              "extra_features": {}, "start_date": START_DATE, "end_date": END_DATE}
+    records, summary = main(config)
+    create_plots(input_dir=OUTPUT_DIR, day=DAY)

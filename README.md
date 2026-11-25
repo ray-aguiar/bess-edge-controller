@@ -18,14 +18,19 @@ python -m venv .venv
 
 For an existing checkout, run `git submodule update --init --recursive`.
 
-## Train
+## Generate data and train
 
-Edit `config`, `hyperparameters` and `seed` in the main block of [train.py](train.py).
-Choose `"mlp"` or `"lstm"`, the dataset dates and optional local `extra_features`.
+Set the case, dates, window and `extra_features` in [train.py](train.py), then
+run:
 
 ```powershell
 .\.venv\Scripts\python.exe train.py
 ```
+
+Training reuses matching `x.pt`/`y.pt` tensors when available, otherwise it
+generates the teacher dataset first. Set `"extra_features": {}` to disable
+optional inputs. Datasets are saved under `results/datasets/`; changing the
+architecture lets you train another model from the same data.
 
 The best validation-MSE model is saved as `best.pt`. Current defaults produce:
 

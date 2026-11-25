@@ -2,6 +2,7 @@
 """Export full-period and daily plots from test CSV results."""
 import json
 from pathlib import Path
+import re
 
 import matplotlib
 matplotlib.use("Agg")
@@ -125,13 +126,20 @@ def plot_bess_power(bess, dt, daily=False, output_dir=None):
 
 def plot_voltages(buses, dt, daily=False, output_dir=None):
     fig, ax = setup_figure("Bus voltage magnitude", "Voltage [pu]", daily)
-    columns = sorted(c for c in buses.columns if c.startswith("bus_") and c.endswith("_v_pu"))
+    columns = {}
+    phase_order = {"a": 0, "b": 1, "c": 2, None: 3}
+    for column in buses.columns:
+        match = re.fullmatch(r"(bus_.+?)(?:_([abc]))?_v_pu", column)
+        if match:
+            bus, phase = match.groups()
+            if bus not in columns or phase_order[phase] < phase_order[columns[bus][0]]:
+                columns[bus] = (phase, column)
 
-    for i, column in enumerate(columns):
+    for i, (bus, (_, column)) in enumerate(sorted(columns.items())):
         df = buses.sort_values("timestamp")
         plot_step(ax, elapsed_hours(df, daily), df[column], dt,
                   color=COLORS[i % len(COLORS)], linewidth=1,
-                  label=column.replace("_v_pu", ""))
+                  label=bus)
 
     save_figure(fig, ax, "daily_voltages.png" if daily else "full_voltages.png", output_dir)
 

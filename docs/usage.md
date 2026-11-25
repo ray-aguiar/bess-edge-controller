@@ -37,9 +37,10 @@ Dependencies include PyTorch for CPU; both submodules are installed in editable 
 
 ## Select dataset dates
 
-Both scripts accept `start_date` (inclusive) and `end_date` (exclusive) in the
-configuration dictionary. Dates without an offset use `Europe/Zurich` when the
-dataset has timezone-aware timestamps; explicit UTC/offset dates also work.
+The dataset configuration in `train.py` and `test.py` accepts `start_date` (inclusive) and
+`end_date` (exclusive) in their configuration. Dates without an offset use
+`Europe/Zurich` when the dataset has timezone-aware timestamps; explicit
+UTC/offset dates also work.
 For example, `2023-01-01` to `2023-01-02` selects one Swiss calendar day.
 Boundaries must match dataset intervals and remain within the available data.
 The selected range determines the number of steps.
@@ -49,37 +50,46 @@ Without dates, collection and policy testing use the complete dataset.
 Each selected range starts a fresh SoC/history episode.
 The saved configuration includes resolved dates, row offset and step count.
 
-## Collect teacher data
+## Generate and reuse teacher data
 
 ```powershell
 .\.venv\Scripts\python.exe train.py
 ```
 
-The main block collects tensors once and trains BehaviorCloning in a loop with
-`max_iterations = 1`, saving the model under `results/train/supervised/lstm/extra_features/seed_42/trial_0/` with the current defaults.
-It uses the selected 2023 range for an 80/20 random train/evaluation split (`eval_fraction=0.2`),
-with the supplied seed. `x_train`/`y_train` feed training; `x_eval`/`y_eval`
-are evaluated after every epoch. The test period is selected separately in 2024.
-Edit `config`, `hyperparameters`, `output` and `seed` in that block,
-or call the collector directly:
+Edit `DATASET_CONFIG` in `train.py` for the case, device, dates, window,
+OPF block size and `extra_features`. Use `"extra_features": {}` to disable
+optional inputs. Training loads a complete matching dataset if it exists;
+otherwise it runs the generator. Generated datasets contain `x.pt`, `y.pt`,
+`config.json` and inspectable `x.json`/`y.json` under
+`results/datasets/<case_name>/<dataset_name>/`. The dataset folder name uses
+the starting year, device, window, feature mode (`extra` or `no_extra`) and an
+eight-character hash of the full configuration. For example:
+`results/datasets/switzerland_5bus/2023_b1_w96_extra_a1b2c3d4/`.
+The hash distinguishes different dates, feature selections, cases and OPF
+settings without making the folder name long.
+With the current configuration, X has six base inputs, four time inputs and
+the normalized buy price input for each observation.
 
 ```python
-from train import main
+from generate_dataset import generate_dataset
 
-config = {"window": 3, "device": "b1", "case": "data/5bus-switzerland",
+config = {"window": 3, "device": "b1", "case": "data/switzerland/5bus",
+          "extra_features": {},
           "block_weeks": None,
           "start_date": "2023-01-01", "end_date": "2023-01-02"}
-x, y = main(config, output="results/train/seed_42", seed=42)
+dataset_dir = generate_dataset(config)
 ```
 
 Collection uses `opf_teacher.collect_pairs(case, PairConfig(...))`; the teacher
-solves the selected period once and owns local selection and history assembly. This repository
+solves the selected period and owns local selection and history assembly. This repository
 selects the dates, fixes PV operation and converts the returned pairs to tensors.
 The teacher reconstructs observations using the optimized SoC and previous actions;
 no environment is stepped during collection. Dates define the complete optimization
 period, so profiles never enter the next dataset partition. The saved configuration
-records `teacher_mode="single_optimization"` by default. X contains only the selected bus and battery signals;
-Y is that battery's current P/Q action in pu. Training sets `pad_initial=True`:
+records `teacher_mode="weekly_blocks"` when `block_weeks` is set and
+`"single_optimization"` when it is `None`. X contains the selected
+bus and battery signals plus requested extras; Y is that battery's current P/Q
+action in pu. Collection sets `pad_initial=True`:
 missing past observations repeat the first state, matching policy evaluation.
 With window 3, the first windows are `[x0, x0, x0]`, `[x0, x0, x1]`, then
 `[x0, x1, x2]`; 96 valid steps produce 96 pairs. This initialization occurs only
@@ -96,27 +106,45 @@ across blocks. The original terminal SoC target applies only to the last block.
 The saved mode becomes `teacher_mode="weekly_blocks"`. This reduces optimization
 memory, but does not guarantee the optimum of a single full-period problem.
 
-The function returns CPU float32 PyTorch tensors: X has shape
-`[samples, window, F]` and Y has shape `[samples, 2]`, where F is six base features plus the selected extras. The feature order is shared
-with `test.py`. For 96 valid intervals and window 3, their shapes are
-`[96, 3, 6]` and `[96, 2]`. The tensors are saved as `x.pt` and `y.pt`:
+X is a CPU float32 tensor with shape `[samples, window, F]`, and Y has shape
+`[samples, 2]`. Feature order is stored in the dataset `config.json` and reused
+by `test.py` through the resulting checkpoint metadata. The same dataset can be
+used to train both network architectures without running OPF collection again.
 
 ```python
 import torch
+from generate_dataset import dataset_directory
+from train import DATASET_CONFIG
 
-x = torch.load("results/train/seed_42/x.pt")
-y = torch.load("results/train/seed_42/y.pt")
+dataset_dir = dataset_directory(DATASET_CONFIG)
+x = torch.load(dataset_dir / "x.pt", map_location="cpu", weights_only=True)
+y = torch.load(dataset_dir / "y.pt", map_location="cpu", weights_only=True)
 ```
 
 The original pairs remain in `x.json` and `y.json` for inspection, including
-observation timestamps. `config.json` records the seed, settings and
-feature/target order. Python, NumPy and PyTorch share the supplied seed;
-PyTorch deterministic algorithms are enabled, and profiles stay chronological.
-`main()` prepares and returns X/Y; training is coordinated outside that function.
+observation timestamps. The dataset `config.json` records generation settings,
+resolved dates and feature/target order. Training randomness is configured
+separately in `train.py`.
 
 ## Train a behavior-cloning policy
 
-Optional `extra_features` in the training configuration adds pre-action measurements
+Choose `ARCHITECTURE`, training hyperparameters, evaluation fraction and seed
+in `train.py`, then run:
+
+```powershell
+.\.venv\Scripts\python.exe train.py
+```
+
+Training loads `x.pt` and `y.pt` (generating them first only if needed), makes
+the seeded train/evaluation split, and saves model checkpoints under
+`results/train/`. With the current defaults, the
+best model is saved to
+`results/train/supervised/lstm/extra_features/seed_42/trial_0/best.pt`.
+Change `ARCHITECTURE` to `"mlp"` to train an MLP from the same dataset; teacher
+data does not need to be regenerated. The checkpoint's `training.json` keeps
+the dataset features and configuration required by `test.py`.
+
+Optional `extra_features` in `train.py` adds pre-action measurements
 and communicated device signals without changing the controlled BESS or its P/Q targets:
 
 ```python
@@ -125,7 +153,7 @@ and communicated device signals without changing the controlled BESS or its P/Q 
     "branches": ["p_flow_pu", "q_flow_pu"],
     "bess": {"b2": ["soc_before_frac", "previous_p_pu"]},
     "pv": {"pv1": ["available_pu", "previous_p_pu"]},
-    "grid": ["buy_price_per_kwh", "sell_price_per_kwh"],
+    "grid": ["buy_price_01"],
     "bus": ["angle_before_deg"],
 }
 ```
@@ -135,15 +163,21 @@ and `month_cos`; it computes circular encodings from each observation's
 timestamp. Hours use local timestamp time with sub-hour precision, and months
 use the 1-based calendar month. Because these are ordinary selected extras,
 the same configuration adds them to teacher data and live policy inputs.
+`grid.buy_price_01` is the buy tariff scaled with the same fixed bounds across
+the standard, time-of-use and dynamic profiles:
+`(buy_price_per_kwh - 0.14672) / (0.288823 - 0.14672)`. All prices in those
+profiles fall within these bounds; out-of-range prices raise an error rather
+than silently changing or clipping the scaling.
 
 Use only device IDs present in the case: the supplied Swiss case has `b1` and
 `pv1`, but no `b2`. Omit groups you do not need, or use `{}` for the original six inputs.
-Nonempty `extra_features` automatically selects the label `"extra_features"`:
+Nonempty dataset `extra_features` automatically selects the label `"extra_features"`:
 `results/train/supervised/lstm/extra_features/seed_42/trial_0/`.
 With `extra_features={}`, the original folder structure is preserved.
-The label is saved in the configuration; set `label="extra_features"` in
-the `test.py` main block to select the experiment. Existing `local_p_flow`
-experiments keep their original paths. Test outputs keep the same hierarchy.
+The label is saved with the dataset and copied into `training.json`; set
+`label="extra_features"` in the `test.py` main block to select that model.
+Existing `local_p_flow` experiments keep their original paths. Test outputs
+keep the same hierarchy.
 Branch signals include every terminal connected to the controlled BESS bus,
 identified by element, terminal and phase; optional fields also include `current_a`
 and `current_angle_deg`. Power is positive entering the line/transformer terminal,
@@ -159,34 +193,16 @@ The six default inputs come first; extra paths are sorted by group, identifier a
 checkpoints without extras. The test evaluator controls the selected BESS,
 keeps other BESS commands at P=Q=0, and uses available PV with Q=0.
 
-Set `config["architecture"]` to `"lstm"` (default) or `"mlp"`. The LSTM reads
+Set `ARCHITECTURE` in `train.py` to `"lstm"` (default) or `"mlp"`. The LSTM reads
 `[batch, window, features]` in chronological order and uses its last output
 to predict the current BESS P/Q action. It has one recurrent layer; `hidden_size`
 sets its width. Its hidden state starts at zero for each window, so memory is
 limited to the supplied history. The MLP flattens the same window.
 
-Using the training tensors prepared by the main block, create the trainer and run the loop:
-
-```python
-from pathlib import Path
-from learning.algorithms.behavior_cloning import BehaviorCloning, Hyperparameter
-
-hyperparameters = Hyperparameter(hidden_size=64, learning_rate=1e-3,
-                                batch_size=64, epochs=100)
-seed = 42
-trainer = BehaviorCloning(hyperparameters)
-output = Path("results/train") / f"seed_{seed}"
-max_iterations = 1
-for iteration in range(max_iterations):
-    trained_model = trainer.train(x_train, y_train, x_eval, y_eval, config,
-                                  output=output / f"trial_{iteration}", seed=seed)
-```
-
-The `if __name__ == "__main__"` block collects data once by calling `main()`,
-splits sample indices with `random_split`, then creates BehaviorCloning and
-runs its training loop. Each observation window keeps its original order.
-Each seed has its own `seed_42/`, `seed_43/`, etc., with the collected data.
-Each iteration writes weights/history to `trial_0/`, `trial_1/`, etc. inside that seed folder.
+`train.py` performs this split and training loop from the selected dataset tensors.
+Each observation window keeps its original order. Each seed has its own
+`seed_42/`, `seed_43/`, etc. under the model folder; each iteration writes
+weights and history to `trial_0/`, `trial_1/`, etc.
 The class creates the selected CPU network, trains with Adam and MSE, and returns the lowest-MSE
 model in evaluation mode. Training hyperparameters come from the `Hyperparameter` object;
 `config` describes the dataset and is recorded for reproducibility.
@@ -203,11 +219,10 @@ the current environment scenarios are deterministic, so changing the seed
 changes training randomness while preserving the scenario. Reproducibility
 assumes the same code, data, dependency versions and execution platform.
 
-When using a BehaviorCloning instance directly, its `train()` method returns a
-model and its `evaluate(x_eval, y_eval)` method returns MSE without updating weights.
-The random internal split may share historical observations between samples;
-final testing uses the separate second year, outside the collected teacher horizons.
-The trainer uses the supplied split and evaluates after each training epoch.
+The evaluation fraction is a seeded random split over windows, so nearby
+windows can share historical observations across the train/evaluation split.
+For stronger temporal generalization, evaluate on dates outside the training
+period, as the default test period does.
 Hyperparameters are selected manually for now; a future Bayesian search can
 supply a new `Hyperparameter` object per trial and compare validation MSE.
 `torch.nn.Module.train()` only switches the network's mode; the algorithm's
@@ -226,7 +241,7 @@ folder and seed in its main block, or call:
 from test import main
 
 records, summary = main(model_path="results/train/supervised/lstm/seed_42/trial_0/best.pt",
-                        config={"case": "data/5bus-switzerland", "architecture": "lstm",
+                        config={"case": "data/switzerland/5bus", "architecture": "lstm",
                                 "start_date": "2024-02-29", "end_date": "2024-03-01"},
                         output="results/test/seed_42/trial_0", seed=42)
 ```
