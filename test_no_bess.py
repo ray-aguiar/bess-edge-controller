@@ -46,7 +46,7 @@ def main(config, model_folder, output="results/test/no_bess", seed=0):
 
 if __name__ == "__main__":
 
-    day = "2024-01-03"
+    day = "2024-01-03" # Day data used for daily plots
     config = {
         "case": str(CASE_PATH),
         "architecture": "mlp",

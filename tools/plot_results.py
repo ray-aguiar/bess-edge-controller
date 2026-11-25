@@ -1,5 +1,6 @@
 
 """Export full-period and daily plots from test CSV results."""
+import json
 from pathlib import Path
 
 import matplotlib
@@ -77,17 +78,33 @@ def save_figure(fig, ax, filename, output_dir):
     plt.close(fig)
 
 
-def plot_soc(bess, dt, daily=False, output_dir=None):
+def load_soc_limits(case):
+    """Load each BESS's SOC limits from its case directory."""
+    devices_path = Path(case) / "devices.json"
+    devices = json.loads(devices_path.read_text(encoding="utf-8"))
+    return {
+        device["id"]: (
+            device.get("soc_min_frac", 0.0),
+            device.get("soc_max_frac", 1.0),
+        )
+        for device in devices["bess"]
+    }
+
+
+def plot_soc(bess, dt, soc_limits, daily=False, output_dir=None):
     fig, ax = setup_figure("Battery state of charge", "State of charge", daily)
     groups = bess.groupby("device") if "device" in bess.columns else [("BESS", bess)]
 
     for i, (device, df) in enumerate(groups):
         df = df.sort_values("timestamp")
+        if device not in soc_limits:
+            raise ValueError(f"No SOC limits found for BESS {device!r}")
         plot_step(ax, elapsed_hours(df, daily), df["soc_before_frac"], dt,
                   color=COLORS[i % len(COLORS)], label=str(device))
-
-    ax.axhline(0.9, color="black", linestyle="--", label="Upper limit")
-    ax.axhline(0.1, color="black", linestyle=":", label="Lower limit")
+        soc_min, soc_max = soc_limits[device]
+        color = COLORS[i % len(COLORS)]
+        ax.axhline(soc_max, color=color, linestyle="--", label=f"{device} upper limit")
+        ax.axhline(soc_min, color=color, linestyle=":", label=f"{device} lower limit")
     ax.set_ylim(0, 1)
     save_figure(fig, ax, "daily_soc.png" if daily else "full_soc.png", output_dir)
 
@@ -171,10 +188,12 @@ def create_plots(input_dir, day, output_dir=None):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     data = load_data(input_dir)
+    report = json.loads((input_dir / "summary.json").read_text(encoding="utf-8"))
+    soc_limits = load_soc_limits(report["config"]["case"])
     dt = get_interval(data["grid"])
 
     # Full-period plots
-    plot_soc(data["bess"], dt, output_dir=output_dir)
+    plot_soc(data["bess"], dt, soc_limits, output_dir=output_dir)
     plot_voltages(data["buses"], dt, output_dir=output_dir)
     plot_cost(data["grid"], dt, output_dir=output_dir)
 
@@ -184,7 +203,7 @@ def create_plots(input_dir, day, output_dir=None):
     if any(df.empty for df in daily.values()):
         raise ValueError(f"Data wasn't found for date {day}.")
 
-    plot_soc(daily["bess"], dt, daily=True, output_dir=output_dir)
+    plot_soc(daily["bess"], dt, soc_limits, daily=True, output_dir=output_dir)
     plot_voltages(daily["buses"], dt, daily=True, output_dir=output_dir)
     plot_cost(daily["grid"], dt, daily=True, output_dir=output_dir)
     plot_power_flow(daily["pv"], daily["grid"], daily["bess"],

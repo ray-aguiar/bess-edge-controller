@@ -121,6 +121,7 @@ and communicated device signals without changing the controlled BESS or its P/Q 
 
 ```python
 "extra_features": {
+    "time": ["hour_sin", "hour_cos", "month_sin", "month_cos"],
     "branches": ["p_flow_pu", "q_flow_pu"],
     "bess": {"b2": ["soc_before_frac", "previous_p_pu"]},
     "pv": {"pv1": ["available_pu", "previous_p_pu"]},
@@ -128,6 +129,12 @@ and communicated device signals without changing the controlled BESS or its P/Q 
     "bus": ["angle_before_deg"],
 }
 ```
+
+The `time` group accepts any subset of `hour_sin`, `hour_cos`, `month_sin`
+and `month_cos`; it computes circular encodings from each observation's
+timestamp. Hours use local timestamp time with sub-hour precision, and months
+use the 1-based calendar month. Because these are ordinary selected extras,
+the same configuration adds them to teacher data and live policy inputs.
 
 Use only device IDs present in the case: the supplied Swiss case has `b1` and
 `pv1`, but no `b2`. Omit groups you do not need, or use `{}` for the original six inputs.

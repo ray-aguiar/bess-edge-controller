@@ -51,8 +51,8 @@ def main(model_path, config, output="results/test", seed=0):
 if __name__ == "__main__":
     architecture = "mlp"
     training = "supervised"
-    label = None
-    day = "2024-01-03"
+    label = "extra_features" #None
+    day = "2024-01-03" # Day data used for daily plots
 
     model_folder = Path(f"results/train/{training}/{architecture}")
     if label:
