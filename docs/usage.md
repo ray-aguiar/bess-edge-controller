@@ -71,7 +71,7 @@ With the current configuration, X has six base inputs, four time inputs and
 the normalized buy price input for each observation.
 
 ```python
-from generate_dataset import generate_dataset
+from tools.generate_dataset import generate_dataset
 
 config = {"window": 3, "device": "b1", "case": "data/switzerland/5bus",
           "extra_features": {},
@@ -113,7 +113,7 @@ used to train both network architectures without running OPF collection again.
 
 ```python
 import torch
-from generate_dataset import dataset_directory
+from tools.generate_dataset import dataset_directory
 from train import DATASET_CONFIG
 
 dataset_dir = dataset_directory(DATASET_CONFIG)
@@ -177,7 +177,8 @@ With `extra_features={}`, the original folder structure is preserved.
 The label is saved with the dataset and copied into `training.json`; set
 `label="extra_features"` in the `test.py` main block to select that model.
 Existing `local_p_flow` experiments keep their original paths. Test outputs
-keep the same hierarchy.
+use a matching `extra_features` folder, or a `no_extra` folder when testing a
+model without extra features.
 Branch signals include every terminal connected to the controlled BESS bus,
 identified by element, terminal and phase; optional fields also include `current_a`
 and `current_angle_deg`. Power is positive entering the line/transformer terminal,
@@ -304,6 +305,15 @@ remains available:
 ```powershell
 .\.venv\Scripts\python.exe -m tools.scripts.evaluate_mpc --steps 96 --horizon 8 --label contract
 ```
+
+For a simple price-arbitrage baseline, run `test_rule_based.py`. Set `WINDOW`
+and `POWER_FRACTION` at the top of the script. It compares the current
+`buy_price_01` against the mean of up to the preceding `WINDOW` prices, charges
+below that mean and discharges above it. Positive BESS power means charging;
+reactive power is zero. The first interval has no price history and therefore
+requests zero power. The script runs the controller in OpenDSS, saves the
+standard result files, and checks requested power and SOC against the case
+limits.
 
 ## Working on the submodules
 

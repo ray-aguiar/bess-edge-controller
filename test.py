@@ -15,7 +15,7 @@ from tools.plot_results import create_plots
 CASE_PATH = Path(__file__).resolve().parent / "data" / "switzerland" / "5bus" #"5bus-switzerland"
 ARCHITECTURE = "mlp"
 TRAINING = "supervised"
-LABEL = None #"extra_features"  # Set to None for a model without extra features.
+LABEL = "extra_features"  # Set to None for a model without extra features.
 DAY = "2024-01-03" # Day data used for daily plots
 SEED = 42
 START_DATE = "2024-01-01"
@@ -55,6 +55,14 @@ def main(model_path, config, output="results/test", seed=0):
     return records, summary
 
 
+def test_output_directory(model_folder, label):
+    relative_path = Path(model_folder).relative_to("results/train")
+    if label is None:
+        relative_path = (relative_path.parent.parent / "no_extra"
+                         / relative_path.parent.name / relative_path.name)
+    return Path("results/test") / relative_path
+
+
 if __name__ == "__main__":
     model_folder = Path(f"results/train/{TRAINING}/{ARCHITECTURE}")
     if LABEL:
@@ -62,7 +70,7 @@ if __name__ == "__main__":
     model_folder /= f"seed_{SEED}/trial_0"
     config = {"case": str(CASE_PATH), "architecture": ARCHITECTURE, "training": TRAINING,
               "start_date": START_DATE, "end_date": END_DATE}
-    output_dir = Path("results/test") / model_folder.relative_to("results/train")
+    output_dir = test_output_directory(model_folder, LABEL)
 
     records, summary = main(model_folder / "best.pt", config,
                             output=output_dir, seed=SEED)

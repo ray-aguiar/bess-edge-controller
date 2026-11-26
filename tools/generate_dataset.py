@@ -4,15 +4,20 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 
 import torch
 
 from opf_teacher import PairConfig, collect_pairs
 from opf_teacher.opf.single_phase import load_case
+
+if __package__ is None:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from tools.dataset import configure_pv, select_period
 from tools.features import TARGETS, encode, feature_order
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 
 def _path_token(value):
     return re.sub(r"[^A-Za-z0-9._-]+", "-", str(value)).strip("-") or "all"

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import random_split
 
-from generate_dataset import dataset_directory, generate_dataset
+from tools.generate_dataset import dataset_directory, generate_dataset
 from learning.algorithms.behavior_cloning import BehaviorCloning, Hyperparameter
 from learning.networks.lstm import LSTM
 from learning.networks.mlp import MLP
@@ -20,7 +20,7 @@ DATASET_CONFIG = {
     "end_date": "2023-12-31",
     "window": 96,
     "block_weeks": 1,
-    "extra_features": {}#{"time": ["hour_sin", "hour_cos", "month_sin", "month_cos"], "grid": ["buy_price_01"]},  # Use {} for no extra features.
+    "extra_features": {"time": ["hour_sin", "hour_cos", "month_sin", "month_cos"], "grid": ["buy_price_01"]},  # Use {} for no extra features.
 }
 
 ARCHITECTURE = "mlp"  # "mlp" or "lstm"
@@ -40,7 +40,7 @@ def _dataset_path():
     return path
 
 def load_dataset(dataset_dir):
-    """Load tensors and input/target metadata produced by generate_dataset.py."""
+    """Load tensors and input/target metadata produced by tools/generate_dataset.py."""
     dataset_dir = Path(dataset_dir)
     if not dataset_dir.is_dir():
         raise FileNotFoundError(f"Dataset directory not found: {dataset_dir}")

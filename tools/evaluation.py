@@ -22,14 +22,20 @@ class PolicyEvaluator:
         self.env = MicrogridEnv(EnvironmentConfig(case.config_path, episode_steps=period["steps"],
                                                 start_step=period["start_step"]))
 
-    def evaluate(self, model=None, record=False, disable_bess=False):
+    def evaluate(self, model=None, record=False, disable_bess=False, controller=None):
         if not disable_bess:
-            if model is None:
-                raise ValueError("A model is required when BESS control is enabled.")
-            model.eval()
+            if (model is None) == (controller is None):
+                raise ValueError("Provide exactly one model or controller when BESS control is enabled.")
+            if model is not None:
+                model.eval()
+        if controller is not None:
+            controller.reset()
         history = deque(maxlen=self.config["window"])
         observation, _ = self.env.reset(seed=self.seed)
         initial_soc = observation["bess"][self.device]["soc_before_frac"]
+        bess = next(device for device in self.env.bess_list if device.id == self.device)
+        p_charge_max_pu = bess.p_charge_max_kw / self.env.normalizer.s_base_kva
+        p_discharge_max_pu = bess.p_discharge_max_kw / self.env.normalizer.s_base_kva
         records, total_reward, total_cost = [], 0.0, 0.0
         for step in range(self.config["steps"]):
             state = local_observation(observation, self.bus, self.device, self.config.get("extra_features"))
@@ -37,6 +43,8 @@ class PolicyEvaluator:
             window = [history[0]] * (history.maxlen - len(history)) + list(history)
             if disable_bess:
                 predicted = torch.zeros(len(TARGETS))
+            elif controller is not None:
+                predicted = torch.tensor(controller.action(state, p_charge_max_pu, p_discharge_max_pu))
             else:
                 with torch.inference_mode():
                     predicted = model(encode(window, self.config.get("features")).unsqueeze(0)).reshape(-1)
