@@ -1,11 +1,8 @@
-"""Run a price-moving-average BESS strategy in the OpenDSS environment."""
+"""Run a selected rule-based BESS strategy in the OpenDSS environment."""
+from importlib import import_module
 import json
 from pathlib import Path
 
-from learning.algorithms.price_moving_average import PriceMovingAverageStrategy
-from opf_teacher.opf.single_phase import load_case
-from opf_teacher.teacher import select_extra_features
-from tools.dataset import select_period
 from tools.evaluation import PolicyEvaluator
 from tools.export_results import save_timeseries
 from tools.plot_results import create_plots
@@ -14,36 +11,22 @@ from tools.plot_results import create_plots
 ROOT = Path(__file__).resolve().parent
 CASE_PATH = ROOT / "data" / "switzerland" / "5bus"
 DEVICE = "b1"
-WINDOW = 96
-POWER_FRACTION = 0.2
+ALGORITHM = "price_moving_average"
 START_DATE = "2024-01-01"
 END_DATE = "2024-01-10"
 DAY = "2024-01-03"
 SEED = 42
-OUTPUT_DIR = Path("results/test/other/rule_based") / f"window_{WINDOW}_power_{POWER_FRACTION:.0%}"
-EXTRA_FEATURES = {"grid": ["buy_price_01"]}
-
-
-def _previous_buy_prices(config, window):
-    case = load_case(config["case"])
-    _, period = select_period(case, config, default_steps=None)
-    start_step = period["start_step"]
-    if start_step < window:
-        raise ValueError(f"Need {window} earlier price steps before the selected start date")
-    prices = case.price.iloc[start_step - window:start_step]
-    return [
-        select_extra_features({"grid": {"buy_price_per_kwh": price}}, None, EXTRA_FEATURES)
-        ["grid"]["buy_price_01"]
-        for price in prices
-    ], case.index[start_step - window], case.index[start_step]
+OUTPUT_DIR = Path("results/test/other/rule_based") / ALGORITHM
 
 
 def main(output=OUTPUT_DIR, seed=SEED):
-    config = {"case": str(CASE_PATH), "device": DEVICE, "window": WINDOW,
-              "extra_features": EXTRA_FEATURES, "start_date": START_DATE, "end_date": END_DATE}
-    initial_prices, history_start, history_end = _previous_buy_prices(config, WINDOW)
+    algorithm = import_module(f"learning.algorithms.rule_based.{ALGORITHM}")
+    config = {"case": str(CASE_PATH), "device": DEVICE,
+              "window": getattr(algorithm, "WINDOW", 1),
+              "extra_features": getattr(algorithm, "EXTRA_FEATURES", {}),
+              "start_date": START_DATE, "end_date": END_DATE}
+    strategy, algorithm_config = algorithm.create_strategy(config)
     evaluator = PolicyEvaluator(config, seed=seed)
-    strategy = PriceMovingAverageStrategy(WINDOW, POWER_FRACTION, initial_prices)
     bess = next(device for device in evaluator.env.bess_list if device.id == DEVICE)
     try:
         records, summary = evaluator.evaluate(controller=strategy, record=True)
@@ -66,10 +49,8 @@ def main(output=OUTPUT_DIR, seed=SEED):
 
         output = Path(output)
         save_timeseries(records, output)
-        report = {"config": evaluator.config, "seed": seed, "controller": "price_moving_average",
-                  "window": WINDOW, "power_fraction": POWER_FRACTION, "pv_policy": "fixed",
-                  "price_history": {"steps": len(initial_prices), "start": history_start.isoformat(),
-                                    "end_exclusive": history_end.isoformat()},
+        report = {"config": evaluator.config, "seed": seed, "controller": ALGORITHM,
+                  **algorithm_config, "pv_policy": "fixed",
                   "bess_limits": {"soc_min_frac": bess.soc_min_frac, "soc_max_frac": bess.soc_max_frac,
                                   "p_charge_max_kw": bess.p_charge_max_kw,
                                   "p_discharge_max_kw": bess.p_discharge_max_kw},

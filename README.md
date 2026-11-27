@@ -28,27 +28,20 @@ run:
 ```
 
 Training reuses matching `x.pt`/`y.pt` tensors when available, otherwise it
-generates the teacher dataset first. Set `"extra_features": {}` to disable
-optional inputs. Datasets are saved under `results/datasets/`; changing the
-architecture lets you train another model from the same data.
+generates the teacher dataset first. The current defaults use an MLP and the
+normalized grid buy price as an extra input; set `"extra_features": {}` to
+disable optional inputs. Datasets are saved under `results/datasets/`, and
+changing the architecture lets you train another model from the same data.
 
-The best validation-MSE model is saved as `best.pt`. Current defaults produce:
-
-```text
-results/train/supervised/lstm/extra_features/seed_42/trial_0/best.pt
-```
-
-With `extra_features={}`, the `extra_features` folder is omitted.
+The best validation-MSE model is saved as `best.pt` under
+`results/train/supervised/<architecture>/<dataset_name>/seed_42/trial_0/`.
+`dataset_name` identifies the selected case, dates, window and features.
 
 ## Test
 
-In [test.py](test.py), select the matching model, seed and test dates.
-For the current training defaults, set:
-
-```python
-architecture = "lstm"
-label = "extra_features"
-```
+In [test.py](test.py), select the model architecture, matching
+`MODEL_EXTRA_FEATURES`, seed and test dates. For the training defaults, set
+`MODEL_EXTRA_FEATURES = {"grid": ["buy_price_01"]}`.
 
 ```powershell
 .\.venv\Scripts\python.exe test.py
@@ -56,5 +49,9 @@ label = "extra_features"
 
 Results are saved under `results/test/`, including cost/reward, SoC and electrical
 CSV measurements. Date ranges include `start_date` and exclude `end_date`.
+
+For comparison baselines, run [test_no_bess.py](test_no_bess.py) to disable
+the battery or [test_rule_based.py](test_rule_based.py) to evaluate the
+`price_moving_average` dispatch rule.
 
 See [docs/](docs/README.md) for configuration details, formulation and research experiments.

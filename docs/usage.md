@@ -12,11 +12,11 @@ The project includes two editable Git submodules:
 - [opendss_environment](https://github.com/TeradaZenichi/powerflow-opendss-environment): electrical simulation through a Gymnasium environment.
 
 Research scope, formulation and experiment records are in [docs/](README.md).
-The root Python entry points are `train.py` and `test.py`. Essential helpers
-live in `tools/`; standalone verification and profile-generation scripts live
-in `tools/scripts/`. Network architectures live in `learning/networks/` and
-learning algorithms in `learning/algorithms/`. MLP, LSTM and supervised behavior cloning
-are implemented; other architectures and algorithms remain empty scaffolds.
+The root Python entry points include `train.py`, `test.py`, `test_rule_based.py`
+and `test_no_bess.py`. Essential helpers live in `tools/`; standalone
+verification and profile-generation scripts live in `tools/scripts/`. MLP,
+LSTM and supervised behavior cloning are implemented, as is the
+`price_moving_average` rule-based baseline.
 
 Run commands from the repository root. The [main README](../README.md) provides the quick start.
 
@@ -66,9 +66,9 @@ the starting year, device, window, feature mode (`extra` or `no_extra`) and an
 eight-character hash of the full configuration. For example:
 `results/datasets/switzerland_5bus/2023_b1_w96_extra_a1b2c3d4/`.
 The hash distinguishes different dates, feature selections, cases and OPF
-settings without making the folder name long.
-With the current configuration, X has six base inputs, four time inputs and
-the normalized buy price input for each observation.
+settings without making the folder name long. The current `train.py`
+configuration uses a 96-step window and the normalized grid buy price as its
+only extra input, in addition to the six base inputs.
 
 ```python
 from tools.generate_dataset import generate_dataset
@@ -137,12 +137,13 @@ in `train.py`, then run:
 
 Training loads `x.pt` and `y.pt` (generating them first only if needed), makes
 the seeded train/evaluation split, and saves model checkpoints under
-`results/train/`. With the current defaults, the
-best model is saved to
-`results/train/supervised/lstm/extra_features/seed_42/trial_0/best.pt`.
-Change `ARCHITECTURE` to `"mlp"` to train an MLP from the same dataset; teacher
-data does not need to be regenerated. The checkpoint's `training.json` keeps
-the dataset features and configuration required by `test.py`.
+`results/train/`. Current defaults use an MLP, seed 42 and the price extra
+feature; the best checkpoint is saved to
+`results/train/supervised/mlp/<dataset_name>/seed_42/trial_0/best.pt`.
+Change `ARCHITECTURE` to `"lstm"` to train an LSTM from the same dataset;
+teacher data does not need to be regenerated. The checkpoint's
+`training.json` keeps the dataset features and configuration required by
+`test.py`.
 
 Optional `extra_features` in `train.py` adds pre-action measurements
 and communicated device signals without changing the controlled BESS or its P/Q targets:
@@ -171,14 +172,11 @@ than silently changing or clipping the scaling.
 
 Use only device IDs present in the case: the supplied Swiss case has `b1` and
 `pv1`, but no `b2`. Omit groups you do not need, or use `{}` for the original six inputs.
-Nonempty dataset `extra_features` automatically selects the label `"extra_features"`:
-`results/train/supervised/lstm/extra_features/seed_42/trial_0/`.
-With `extra_features={}`, the original folder structure is preserved.
-The label is saved with the dataset and copied into `training.json`; set
-`label="extra_features"` in the `test.py` main block to select that model.
-Existing `local_p_flow` experiments keep their original paths. Test outputs
-use a matching `extra_features` folder, or a `no_extra` folder when testing a
-model without extra features.
+Nonempty dataset `extra_features` automatically sets the metadata label
+`"extra_features"`; with `{}`, the label is unset. The label and feature
+selection are saved with the dataset and copied into `training.json`.
+Dataset-specific output folders distinguish feature selections by a short
+configuration hash.
 Branch signals include every terminal connected to the controlled BESS bus,
 identified by element, terminal and phase; optional fields also include `current_a`
 and `current_angle_deg`. Power is positive entering the line/transformer terminal,
@@ -194,7 +192,7 @@ The six default inputs come first; extra paths are sorted by group, identifier a
 checkpoints without extras. The test evaluator controls the selected BESS,
 keeps other BESS commands at P=Q=0, and uses available PV with Q=0.
 
-Set `ARCHITECTURE` in `train.py` to `"lstm"` (default) or `"mlp"`. The LSTM reads
+Set `ARCHITECTURE` in `train.py` to `"mlp"` (default) or `"lstm"`. The LSTM reads
 `[batch, window, features]` in chronological order and uses its last output
 to predict the current BESS P/Q action. It has one recurrent layer; `hidden_size`
 sets its width. Its hidden state starts at zero for each window, so memory is
@@ -234,8 +232,11 @@ supply a new `Hyperparameter` object per trial and compare validation MSE.
 `test.py` loads an MLP or LSTM checkpoint and runs it in OpenDSS between the selected
 dates. Set `config["architecture"]` manually to `"mlp"` or `"lstm"`, matching the
 checkpoint. It reads the architecture dimensions, observation window and device ID
-from `training.json` next to the checkpoint. The test main block selects architecture and label manually; set them to match
-the training run. Its default selection is MLP without extras. `main()` accepts a single checkpoint. Set the model path, dates, output
+from `training.json` next to the checkpoint. The test main block selects the
+architecture and `MODEL_EXTRA_FEATURES`; set both to match the training run.
+Its default selection is MLP without extras, so set
+`MODEL_EXTRA_FEATURES = {"grid": ["buy_price_01"]}` for a model trained with
+the current `train.py` defaults. `main()` accepts a single checkpoint. Set the model path, dates, output
 folder and seed in its main block, or call:
 
 ```python
@@ -277,13 +278,13 @@ Git-ignored `results/` folder. Exploratory single-seed results do not establish 
 `buses.csv` and `branches.csv` use one row per timestamp and one column per
 measurement. Device CSVs use one row per interval and device:
 
-| File | Measurements |
-| --- | --- |
-| `buses.csv` | Voltage in V/pu, angle, and net P/Q injection into connected branches |
+| File             | Measurements                                                             |
+| ---------------- | ------------------------------------------------------------------------ |
+| `buses.csv`    | Voltage in V/pu, angle, and net P/Q injection into connected branches    |
 | `branches.csv` | P/Q, current in A and angle for each line/transformer terminal and phase |
-| `bess.csv` | Requested and measured P/Q, SoC before/after the interval |
-| `pv.csv` | Available and measured generation, reactive injection |
-| `grid.csv` | Imported/exported power, reactive injection, cost and reward |
+| `bess.csv`     | Requested and measured P/Q, SoC before/after the interval                |
+| `pv.csv`       | Available and measured generation, reactive injection                    |
+| `grid.csv`     | Imported/exported power, reactive injection, cost and reward             |
 
 For the single-phase case, columns include `bus_001_v_pu`,
 `bus_004_p_injection_kw`, `line_line_001_002_t1_p_kw` and
@@ -298,6 +299,32 @@ a fraction. Branch P/Q is positive entering the element from the listed bus;
 both terminal directions are saved. BESS P is positive when charging and Q
 is positive for injection. CSV export lives in `tools/export_results.py`.
 
+The no-BESS baseline is available with:
+
+```powershell
+.\.venv\Scripts\python.exe test_no_bess.py
+```
+
+It runs the same fixed-PV OpenDSS evaluation with BESS commands disabled and
+writes results to `results/test/other/no_bess/`.
+
+For a simple rule-based baseline, run:
+
+```powershell
+.\.venv\Scripts\python.exe test_rule_based.py
+```
+
+The script selects `price_moving_average` by default. Its strategy uses a
+96-interval (24-hour) moving average, initialized from the prices immediately
+before the test period, and charges or discharges at 20% of the configured
+power limit when the current price is below or above that average. It ignores
+PV output and grid import/export state; reactive power is zero. Change
+`WINDOW` and `POWER_FRACTION` in
+`learning/algorithms/rule_based/price_moving_average.py` to adjust the rule.
+Results, including requested/measured BESS power, SoC, cost and grid flows,
+are saved to `results/test/other/rule_based/price_moving_average/`; the script
+checks the configured SoC and power limits.
+
 The previous MPC/NN comparison is preserved in
 `tools/scripts/compare_controllers.py`. The detailed teacher/environment check
 remains available:
@@ -305,15 +332,6 @@ remains available:
 ```powershell
 .\.venv\Scripts\python.exe -m tools.scripts.evaluate_mpc --steps 96 --horizon 8 --label contract
 ```
-
-For a simple price-arbitrage baseline, run `test_rule_based.py`. Set `WINDOW`
-and `POWER_FRACTION` at the top of the script. It compares the current
-`buy_price_01` against the mean of up to the preceding `WINDOW` prices, charges
-below that mean and discharges above it. Positive BESS power means charging;
-reactive power is zero. The first interval has no price history and therefore
-requests zero power. The script runs the controller in OpenDSS, saves the
-standard result files, and checks requested power and SOC against the case
-limits.
 
 ## Working on the submodules
 

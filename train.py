@@ -20,7 +20,7 @@ DATASET_CONFIG = {
     "end_date": "2023-12-31",
     "window": 96,
     "block_weeks": 1,
-    "extra_features": {"time": ["hour_sin", "hour_cos", "month_sin", "month_cos"], "grid": ["buy_price_01"]},  # Use {} for no extra features.
+    "extra_features": {}#{"time": ["hour_sin", "hour_cos", "month_sin", "month_cos"], "grid": ["buy_price_01"]},  # Use {} for no extra features.
 }
 
 ARCHITECTURE = "mlp"  # "mlp" or "lstm"
@@ -83,10 +83,7 @@ def main(dataset_dir=None, architecture=ARCHITECTURE, eval_fraction=EVAL_FRACTIO
     x_eval, y_eval = x[eval_split.indices], y[eval_split.indices]
 
     trainer = BehaviorCloning(hyperparameters or HYPERPARAMETERS, network={"mlp": MLP, "lstm": LSTM}[architecture])
-    output_dir = Path(output_root) / TRAINING / architecture
-    if config.get("label"):
-        output_dir /= config["label"]
-    output_dir /= f"seed_{seed}"
+    output_dir = Path(output_root) / TRAINING / architecture / dataset_dir.name / f"seed_{seed}"
 
     return [trainer.train(x_train, y_train, x_eval, y_eval, config, output_dir / f"trial_{i}", seed)
             for i in range(max_iterations)]
