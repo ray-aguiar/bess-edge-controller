@@ -11,7 +11,7 @@ from tools.plot_results import create_plots
 ROOT = Path(__file__).resolve().parent
 CASE_PATH = ROOT / "data" / "switzerland" / "5bus"
 DEVICE = "b1"
-ALGORITHM = "price_moving_average"
+ALGORITHM = "voltage_proportional"
 START_DATE = "2024-01-01"
 END_DATE = "2024-01-10"
 DAY = "2024-01-03"

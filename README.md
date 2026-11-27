@@ -52,6 +52,7 @@ CSV measurements. Date ranges include `start_date` and exclude `end_date`.
 
 For comparison baselines, run [test_no_bess.py](test_no_bess.py) to disable
 the battery or [test_rule_based.py](test_rule_based.py) to evaluate the
-`price_moving_average` dispatch rule.
+voltage-proportional BESS rule. The detailed usage guide explains how to adjust
+its gain and select the price-moving-average rule.
 
 See [docs/](docs/README.md) for configuration details, formulation and research experiments.

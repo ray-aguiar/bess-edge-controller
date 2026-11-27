@@ -15,8 +15,8 @@ Research scope, formulation and experiment records are in [docs/](README.md).
 The root Python entry points include `train.py`, `test.py`, `test_rule_based.py`
 and `test_no_bess.py`. Essential helpers live in `tools/`; standalone
 verification and profile-generation scripts live in `tools/scripts/`. MLP,
-LSTM and supervised behavior cloning are implemented, as is the
-`price_moving_average` rule-based baseline.
+LSTM and supervised behavior cloning are implemented, alongside
+voltage-proportional and price-moving-average rule-based controllers.
 
 Run commands from the repository root. The [main README](../README.md) provides the quick start.
 
@@ -314,16 +314,28 @@ For a simple rule-based baseline, run:
 .\.venv\Scripts\python.exe test_rule_based.py
 ```
 
-The script selects `price_moving_average` by default. Its strategy uses a
-96-interval (24-hour) moving average, initialized from the prices immediately
-before the test period, and charges or discharges at 20% of the configured
-power limit when the current price is below or above that average. It ignores
-PV output and grid import/export state; reactive power is zero. Change
-`WINDOW` and `POWER_FRACTION` in
-`learning/algorithms/rule_based/price_moving_average.py` to adjust the rule.
-Results, including requested/measured BESS power, SoC, cost and grid flows,
-are saved to `results/test/other/rule_based/price_moving_average/`; the script
-checks the configured SoC and power limits.
+The script selects `voltage_proportional` by default. The rule compares the
+current phase-a voltage at the BESS bus with that bus's mean voltage from a
+fixed-PV, zero-BESS-dispatch OpenDSS baseline. By default, the baseline covers
+January and February 2023 (the interval `[2023-01-01, 2023-03-01)`). If its
+CSV is missing, the script generates it and prints a message; otherwise, it
+prints that it is reusing the cached dataset. The baseline contains voltage
+traces for all buses and phases and is saved under
+`results/datasets/{case}/no_bess_voltages/`.
+
+Adjust `K` in `learning/algorithms/rule_based/voltage_proportional.py` to set
+the requested active power in kW per pu voltage deviation (currently 5000).
+Positive power charges and negative power discharges. The environment applies
+the BESS power and SoC limits. Results, including requested/measured power,
+SoC, cost and grid flows, are saved under
+`results/test/other/rule_based/voltage_proportional/`.
+
+To select the price-based alternative, set `ALGORITHM` in `test_rule_based.py`
+to `price_moving_average`. It uses a 96-interval (24-hour) moving average,
+initialized from prices immediately before the test period, and charges or
+discharges at 20% of the configured power limit when the current price is
+below or above that average. Change `WINDOW` and `POWER_FRACTION` in
+`learning/algorithms/rule_based/price_moving_average.py` to adjust its rule.
 
 The previous MPC/NN comparison is preserved in
 `tools/scripts/compare_controllers.py`. The detailed teacher/environment check
